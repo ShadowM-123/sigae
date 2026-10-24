@@ -3,7 +3,7 @@
 Plataforma de **SHADOW Monitoras Educativas** para operar el acompañamiento de estudiantes en la escuela: bitácoras diarias, expedientes, evaluaciones, familias, monitoras, Academia, materiales, especialistas y reclutamiento.
 
 ## Estado
-Arquitectura v1 cerrada y pasos A y B construidos (24-oct-2026): núcleo, bitácora diaria en celular, portal de la familia y panel de Dirección, todo contra la base falsa. No está en producción.
+Arquitectura v1 cerrada y pasos A, B y C construidos (24-oct-2026): núcleo, bitácora diaria en celular, portal de la familia, panel de Dirección, calendario, pagos por familia, pendientes y solicitudes, red de apoyo (especialistas y citas) y avisos. Todo contra la base falsa. No está en producción.
 
 ## Documentos
 - [`docs/01-Arquitectura.md`](docs/01-Arquitectura.md) — el mapa del sistema (léelo primero).

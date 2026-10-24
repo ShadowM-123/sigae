@@ -3,7 +3,7 @@
    auth, storage, rpc) sobre datos en memoria, persistidos en localStorage.
    Se activa con ?demo=1. NUNCA contiene datos reales. */
 
-const KEY = 'sigae_demo_db_v4';
+const KEY = 'sigae_demo_db_v5';
 const KEY_SESION = 'sigae_demo_sesion';
 
 /* ---------- utilidades de fechas ---------- */
@@ -161,16 +161,36 @@ function semilla() {
   const solicitudes = [
     { id: uuid(), tipo: 'reporte_familia', estudiante_id: 'est-emiliano', solicitante_id: P.f3, datos: { motivo: 'Cita con el neurólogo', fecha_cita: dia(10), detalle: 'Quisiera llevar un resumen del último mes.' }, estado: 'recibida', creado_en: `${dia(-1)}T19:20:00`, actualizado_en: `${dia(-1)}T19:20:00` },
   ];
+  const eventos = [
+    { id: uuid(), tipo: 'visita_escolar', titulo: 'Visita escolar · Colegio Montessori del Valle', fecha: dia(4), hora: '09:30', lugar: 'Colegio Montessori del Valle', estudiante_id: 'est-santiago', monitora_id: P.m1, notas: 'Reunión con la maestra titular para revisar transiciones.', creado_por: P.dir },
+    { id: uuid(), tipo: 'reunion', titulo: 'Reunión de seguimiento con la familia Torres', fecha: dia(8), hora: '17:00', lugar: 'Videollamada', estudiante_id: 'est-valentina', monitora_id: P.m2, notas: '', creado_por: P.dir },
+    { id: uuid(), tipo: 'capacitacion', titulo: 'Capacitación mensual del equipo de monitoras', fecha: dia(15), hora: '16:00', lugar: 'Oficina SHADOW', estudiante_id: null, monitora_id: null, notas: 'Tema: plan de calma y registro de conductas.', creado_por: P.dir },
+    { id: uuid(), tipo: 'entrevista', titulo: 'Entrevista a candidata (reclutamiento)', fecha: dia(6), hora: '11:00', lugar: 'Oficina SHADOW', estudiante_id: null, monitora_id: null, notas: '', creado_por: P.dir },
+  ];
+  const especialistas_estudiante = [
+    { id: 'esp-1', estudiante_id: 'est-santiago', nombre: 'Lic. Karina Soto', especialidad: 'Terapia de lenguaje', tipo: 'terapeuta', contacto: '614 300 0001', lugar: 'Centro Integra, Av. Mirador 1200', dias_horarios: 'Martes y jueves 16:00', perfil_id: P.esp1, registrado_por: P.f1, activo: true },
+    { id: 'esp-2', estudiante_id: 'est-santiago', nombre: 'Dr. Arturo Lozano', especialidad: 'Neurología pediátrica', tipo: 'externo', contacto: '614 300 0002', lugar: 'Hospital Ángeles, consultorio 410', dias_horarios: 'Cita cada 3 meses', perfil_id: null, registrado_por: P.f1, activo: true },
+    { id: 'esp-3', estudiante_id: 'est-santiago', nombre: 'Mtra. Lourdes Chávez', especialidad: 'Maestra titular 3º A', tipo: 'personal_escolar', contacto: 'lchavez@montessoridelvalle.mx', lugar: 'Colegio Montessori del Valle', dias_horarios: '', perfil_id: null, registrado_por: P.dir, activo: true },
+    { id: 'esp-4', estudiante_id: 'est-valentina', nombre: 'Psic. Daniel Ríos', especialidad: 'Psicología infantil', tipo: 'terapeuta', contacto: '614 300 0004', lugar: 'Consultorio privado, Col. San Felipe', dias_horarios: 'Miércoles 17:30', perfil_id: null, registrado_por: P.f2, activo: true },
+    { id: 'esp-5', estudiante_id: 'est-emiliano', nombre: 'Lic. Fabiola Mena', especialidad: 'Terapia ocupacional', tipo: 'terapeuta', contacto: '614 300 0005', lugar: 'CRIT Chihuahua', dias_horarios: 'Lunes y miércoles 15:00', perfil_id: null, registrado_por: P.f3, activo: true },
+  ];
+  const citas = [
+    { id: uuid(), estudiante_id: 'est-santiago', especialista_id: 'esp-2', especialista_nombre: 'Dr. Arturo Lozano', especialidad: 'Neurología pediátrica', fecha: dia(12), hora: '10:30', lugar_modalidad: 'Hospital Ángeles, consultorio 410', observaciones: 'Llevar reporte de SHADOW y la escuela.', creada_por: P.f1 },
+    { id: uuid(), estudiante_id: 'est-santiago', especialista_id: 'esp-1', especialista_nombre: 'Lic. Karina Soto', especialidad: 'Terapia de lenguaje', fecha: dia(1), hora: '16:00', lugar_modalidad: 'Centro Integra', observaciones: '', creada_por: P.f1 },
+    { id: uuid(), estudiante_id: 'est-emiliano', especialista_id: null, especialista_nombre: 'Dra. Elsa Martínez', especialidad: 'Pediatría', fecha: dia(10), hora: '09:00', lugar_modalidad: 'Clínica Santa Fe', observaciones: 'Revisión general.', creada_por: P.f3 },
+    { id: uuid(), estudiante_id: 'est-valentina', especialista_id: 'esp-4', especialista_nombre: 'Psic. Daniel Ríos', especialidad: 'Psicología infantil', fecha: dia(3), hora: '17:30', lugar_modalidad: 'Consultorio', observaciones: '', creada_por: P.f2 },
+  ];
+  const solicitud_historial = solicitudes.map(sl => ({ id: uuid(), solicitud_id: sl.id, estado: 'recibida', nota: null, por: sl.solicitante_id, fecha: sl.creado_en }));
   const notificaciones = [];
   const accesos_sesion = [];
   for (let off = -30; off <= 0; off++) { [P.m1, P.m2, P.m3].forEach((m, i) => { if ((off + i) % 2 === 0) accesos_sesion.push({ id: uuid(), perfil_id: m, fecha_hora: `${dia(off)}T07:${50 + i}:00`, dispositivo: 'celular' }); }); if (off % 3 === 0) accesos_sesion.push({ id: uuid(), perfil_id: P.f1, fecha_hora: `${dia(off)}T18:30:00`, dispositivo: 'celular' }); }
 
-  return { _ver: 4, _archivos: {}, perfiles, familias, familia_tutores, estudiantes, monitoras, asignaciones, catalogos, accesos_sesion, bitacoras, bitacora_banos, bitacora_bloques, bitacora_fotos: [], bitacora_sentir_monitora, bitacora_lecturas, ciclos, objetivos, evaluaciones, pagos, tareas, solicitudes, notificaciones };
+  return { _ver: 5, _archivos: {}, eventos, especialistas_estudiante, citas, solicitud_historial, perfiles, familias, familia_tutores, estudiantes, monitoras, asignaciones, catalogos, accesos_sesion, bitacoras, bitacora_banos, bitacora_bloques, bitacora_fotos: [], bitacora_sentir_monitora, bitacora_lecturas, ciclos, objetivos, evaluaciones, pagos, tareas, solicitudes, notificaciones };
 }
 
 /* ---------- motor ---------- */
 let DB = cargar();
-function cargar() { try { const s = localStorage.getItem(KEY); if (s) { const o = JSON.parse(s); if (o && o._ver === 4) return o; } } catch (e) {} const d = semilla(); guardar(d); return d; }
+function cargar() { try { const s = localStorage.getItem(KEY); if (s) { const o = JSON.parse(s); if (o && o._ver === 5) return o; } } catch (e) {} const d = semilla(); guardar(d); return d; }
 function guardar(d) { try { localStorage.setItem(KEY, JSON.stringify(d || DB)); } catch (e) { console.warn('No se pudo guardar la base falsa', e); } }
 export function reiniciarBaseFalsa() { localStorage.removeItem(KEY); DB = cargar(); }
 

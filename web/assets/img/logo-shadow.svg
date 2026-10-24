@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 190" role="img" aria-label="Shadow Monitoras Educativas">
+  <defs>
+    <linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0483A"/><stop offset="1" stop-color="#C9281C"/></linearGradient>
+  </defs>
+  <g font-family="'Nunito','Arial Black',Arial,sans-serif" font-weight="900" font-size="96" letter-spacing="-2">
+    <text x="18" y="104" fill="#2A2A2E">Shad</text>
+    <text x="18" y="104" fill="#fff" stroke="#2A2A2E" stroke-width="7" paint-order="stroke" style="transform:translate(0,-6px)">Shad</text>
+    <text x="352" y="104" fill="#2A2A2E">w</text>
+    <text x="352" y="104" fill="#fff" stroke="#2A2A2E" stroke-width="7" paint-order="stroke" style="transform:translate(0,-6px)">w</text>
+  </g>
+  <!-- manzana -->
+  <g transform="translate(300,54)">
+    <path d="M22 -2c-14 0-26 12-26 30 0 22 14 44 30 44 5 0 8-2 12-2s7 2 12 2c16 0 30-22 30-44 0-18-12-30-26-30-6 0-10 2-16 2s-10-2-16-2z" fill="url(#m)" stroke="#8E1A10" stroke-width="3"/>
+    <path d="M36 -4c0-10 6-20 18-24" fill="none" stroke="#5A3A1E" stroke-width="5" stroke-linecap="round"/>
+    <path d="M40 -6c6-14 22-18 34-10-4 12-20 18-34 10z" fill="#5FBF3C" stroke="#2F7D32" stroke-width="2.5"/>
+    <ellipse cx="14" cy="18" rx="7" ry="12" fill="#fff" opacity=".35" transform="rotate(-15 14 18)"/>
+  </g>
+  <text x="260" y="150" text-anchor="middle" font-family="'Nunito',Arial,sans-serif" font-weight="800" font-size="30" letter-spacing="1" fill="#6CBE45">MONITORAS EDUCATIVAS</text>
+  <text x="490" y="180" text-anchor="end" font-family="'Nunito',Arial,sans-serif" font-weight="600" font-size="16" fill="#2A2A2E">by Halo Mental</text>
+</svg>

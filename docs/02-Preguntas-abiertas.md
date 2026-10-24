@@ -55,7 +55,7 @@ Lo que el documento de experiencias de usuario deja por definir y solo SHADOW pu
 ## Identidad y cuentas
 | # | Pregunta | Supuesto |
 |---|---|---|
-| 27 | Logotipo, colores y tipografía de SHADOW. | Paleta neutra provisional. |
+| 27 | Logotipo, colores y tipografía de SHADOW. | **Logo recibido (24-oct).** Paleta derivada de él: verde hoja, rojo manzana, sol, crema; Nunito. Falta el archivo PNG del logo en `web/assets/img/logo-shadow.png` y confirmar si Halo Mental debe aparecer. |
 | 28 | Dominio de SHADOW para la app y para el correo (Resend necesita verificar el dominio). | Subdominio de GitHub Pages mientras tanto; correo desde un dominio de prueba. |
 | 29 | Acceso a sus cuentas: invitación como colaborador en GitHub y en la organización de Supabase a Manuel (no compartir contraseñas). | — |
 | 30 | ¿Quién además de la directora tendrá rol **Dirección** o **asistente**? | Solo la directora al inicio. |

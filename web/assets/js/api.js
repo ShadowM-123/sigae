@@ -127,6 +127,49 @@ export async function solicitudesAbiertas() { return ok(await db.from('solicitud
 export async function solicitudesDe(perfilId) { return ok(await db.from('solicitudes').select('*').eq('solicitante_id', perfilId).order('creado_en', { ascending: false })); }
 export async function accesosDe(perfilIds, desde) { if (!perfilIds.length) return []; return ok(await db.from('accesos_sesion').select('*').in('perfil_id', perfilIds).gte('fecha_hora', desde)); }
 
+/* ---------- paso C: calendario, pagos, citas, especialistas, solicitudes ---------- */
+export async function eventosEntre(desde, hasta) { return ok(await db.from('eventos').select('*').gte('fecha', desde).lte('fecha', hasta).order('fecha').order('hora')); }
+export async function guardarEvento(e) { return ok(await db.from('eventos').upsert(e).select().single()); }
+export async function borrarEvento(id) { return ok(await db.from('eventos').delete().eq('id', id)); }
+export async function guardarFamilia(f) { return ok(await db.from('familias').upsert(f).select().single()); }
+export async function guardarPago(p) { return ok(await db.from('pagos').upsert(p).select().single()); }
+export async function borrarPago(id) { return ok(await db.from('pagos').delete().eq('id', id)); }
+/** Crea los pagos que falten para los próximos `meses` meses según el día de pago de la familia. */
+export async function generarPagos(fam, meses = 3) {
+  if (!fam.dia_de_pago) return [];
+  const existentes = await pagosDe(fam.id); const hoy = new Date(hoyIso() + 'T12:00:00'); const nuevos = [];
+  for (let i = 0; i < meses; i++) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() + i, Math.min(fam.dia_de_pago, 28), 12); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); const iso = d.toISOString().slice(0, 10);
+    if (iso < hoyIso() && i === 0) continue;
+    if (!existentes.some(p => p.fecha_vencimiento.slice(0, 7) === iso.slice(0, 7))) nuevos.push({ familia_id: fam.id, fecha_vencimiento: iso, monto: fam.monto_mensual, estado: 'pendiente' });
+  }
+  if (nuevos.length) ok(await db.from('pagos').insert(nuevos));
+  return nuevos;
+}
+export async function pagosTodos() { return ok(await db.from('pagos').select('*').order('fecha_vencimiento')); }
+export async function especialistasDe(estId) { return ok(await db.from('especialistas_estudiante').select('*').eq('estudiante_id', estId).eq('activo', true).order('nombre')); }
+export async function especialistasTodos() { return ok(await db.from('especialistas_estudiante').select('*').eq('activo', true)); }
+export async function guardarEspecialista(e) { return ok(await db.from('especialistas_estudiante').upsert(e).select().single()); }
+export async function citasDe(estId, { desde } = {}) { let q = db.from('citas').select('*').eq('estudiante_id', estId).order('fecha').order('hora'); if (desde) q = q.gte('fecha', desde); return ok(await q); }
+export async function citasEntre(desde, hasta) { return ok(await db.from('citas').select('*').gte('fecha', desde).lte('fecha', hasta).order('fecha').order('hora')); }
+export async function guardarCita(c) { return ok(await db.from('citas').upsert(c).select().single()); }
+export async function borrarCita(id) { return ok(await db.from('citas').delete().eq('id', id)); }
+export async function solicitudesTodas() { return ok(await db.from('solicitudes').select('*').order('creado_en', { ascending: false })); }
+export async function solicitud(id) { return ok(await db.from('solicitudes').select('*').eq('id', id).maybeSingle()); }
+export async function crearSolicitud(s, perfilId) {
+  const fila = ok(await db.from('solicitudes').insert({ ...s, solicitante_id: perfilId, estado: 'recibida' }).select().single());
+  ok(await db.from('solicitud_historial').insert({ solicitud_id: fila.id, estado: 'recibida', por: perfilId, nota: null }));
+  return fila;
+}
+export async function cambiarEstadoSolicitud(id, estado, nota, perfilId, extra = {}) {
+  const fila = ok(await db.from('solicitudes').update({ estado, respuesta_direccion: nota || null, ...extra }).eq('id', id).select().single());
+  ok(await db.from('solicitud_historial').insert({ solicitud_id: id, estado, nota: nota || null, por: perfilId }));
+  return fila;
+}
+export async function historialSolicitud(id) { return ok(await db.from('solicitud_historial').select('*').eq('solicitud_id', id).order('fecha')); }
+export async function tareasTodas() { return ok(await db.from('tareas').select('*').order('fecha')); }
+export async function evaluacionesEntre(desde, hasta) { return ok(await db.from('evaluaciones').select('*').gte('fecha', desde).lte('fecha', hasta)); }
+
 /* ---------- cálculos compartidos ---------- */
 /** Días hábiles del estudiante entre dos fechas (según dias_asistencia). */
 export function diasHabiles(est, desde, hasta) {

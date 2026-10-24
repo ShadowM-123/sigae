@@ -3,6 +3,9 @@ import * as api from './api.js';
 import { exigir } from './auth.js';
 import { marco, esc, fecha, fechaLarga, hora, horaCorta, hoyIso, sumarDias, diasEntre, toast, modal, cerrarModal, iniciales, nombreCorto, edadTexto, proximoCumple, estadoBitacora, valoracionTexto, esFinDeSemana } from './ui.js';
 import { armarWizard, renderLectura, porcentajeAvance } from './bitacora.js';
+import { htmlRedApoyo } from './direccion-c.js';
+import { montarCalendario } from './calendario.js';
+import { avisosMonitora, pintarAvisos } from './avisos.js';
 
 const perfil = await exigir(['monitora']);
 const cat = await api.catalogos();
@@ -12,12 +15,27 @@ const q = new URLSearchParams(location.search);
 let estSel = estudiantes.find(e => e.id === q.get('est')) || estudiantes[0] || null;
 
 const TABS = [
-  { id: 'inicio', ic: '⌂', tx: 'Inicio' }, { id: 'bitacora', ic: '✎', tx: 'Bitácora' }, { id: 'estudiante', ic: '☺', tx: 'Mi estudiante' }, { id: 'misbit', ic: '☰', tx: 'Mis bitácoras' },
+  { id: 'inicio', ic: '⌂', tx: 'Inicio' }, { id: 'bitacora', ic: '✎', tx: 'Bitácora' }, { id: 'estudiante', ic: '☺', tx: 'Mi estudiante' }, { id: 'misbit', ic: '☰', tx: 'Mis bitácoras' }, { id: 'calendario', ic: '📅', tx: 'Calendario' },
   { id: 'academia', ic: '▶', tx: 'Academia', pronto: true }, { id: 'materiales', ic: '▤', tx: 'Materiales', pronto: true },
 ];
 const { pintar: pintarTabs } = marco({ perfil, tabs: TABS, activa: q.get('tab') || 'inicio', onTab: ir, subtitulo: 'Monitora educativa' });
 
-async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacora, estudiante: miEstudiante, misbit }[tab] || inicio)(params); }
+async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacora, estudiante: miEstudiante, misbit, calendario }[tab] || inicio)(params); }
+
+async function calendario() {
+  vista.innerHTML = `<h1 class="titulo">Calendario</h1><div class="subtitulo">Cumpleaños y citas de tu estudiante, evaluaciones programadas, visitas y capacitaciones.</div><div id="calMoni"></div>`;
+  montarCalendario(document.getElementById('calMoni'), { cargar: async (a, b) => {
+    const out = []; const [eventos] = await Promise.all([api.eventosEntre(a, b)]);
+    for (const e of estudiantes) {
+      if (e.fecha_nacimiento) { const f = a.slice(0, 4) + '-' + e.fecha_nacimiento.slice(5); if (f >= a && f <= b) out.push({ id: 'c' + e.id, fecha: f, tipo: 'cumple', titulo: `Cumpleaños de ${nombreCorto(e.nombre)}`, sub: 'Tu estudiante' }); }
+      const [citas, evals] = await Promise.all([api.citasDe(e.id), api.evaluacionesDe(e.id)]);
+      citas.filter(c => c.fecha >= a && c.fecha <= b).forEach(c => out.push({ id: c.id, fecha: c.fecha, hora: c.hora, tipo: 'cita', titulo: `${nombreCorto(e.nombre)} · ${c.especialista_nombre || c.especialidad}`, sub: [c.especialidad, c.lugar_modalidad].filter(Boolean).join(' · ') }));
+      evals.filter(ev => ev.fecha && ev.fecha >= a && ev.fecha <= b).forEach(ev => out.push({ id: ev.id, fecha: ev.fecha, tipo: 'evaluacion', titulo: `Evaluación ${ev.tipo} · ${nombreCorto(e.nombre)}`, sub: ev.realizada ? 'Realizada' : 'Programada' }));
+    }
+    eventos.filter(ev => ev.monitora_id === perfil.id || (ev.estudiante_id && estudiantes.some(e => e.id === ev.estudiante_id)) || ev.tipo === 'capacitacion').forEach(ev => out.push({ id: ev.id, fecha: ev.fecha, hora: ev.hora, tipo: ev.tipo, titulo: ev.titulo, sub: ev.lugar || '' }));
+    return out;
+  } });
+}
 
 /* ---------- utilidades ---------- */
 const selectorEst = (actual, cb) => estudiantes.length > 1 ? `<div class="f" style="margin-bottom:12px"><label>Estudiante</label><select id="selEst">${estudiantes.map(e => `<option value="${e.id}" ${actual?.id === e.id ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('')}</select></div>` : '';
@@ -54,9 +72,11 @@ async function inicio() {
   vista.innerHTML = `<h1 class="titulo">Hola, ${esc(perfil.nombre.split(' ')[0])} 👋</h1><div class="subtitulo">${fechaLarga(hoy)}</div>
     <div class="col" style="gap:12px">${tarjetas.join('')}</div>
     <div class="grid g2" style="margin-top:14px">
-      <div class="card"><div class="hd"><h3>Academia SHADOW</h3></div><div class="bd"><p class="small muted">Tu avance en capacitaciones y las evaluaciones pendientes aparecerán aquí. Esta sección se construye en un paso posterior.</p></div></div>
+      <div class="card"><div class="hd"><h3>Avisos</h3></div><div class="bd" id="avisosMoni"><div class="small muted">Calculando…</div></div></div>
       <div class="card"><div class="hd"><h3>Mis entregas</h3></div><div class="bd" id="resumenEntregas"><div class="small muted">Calculando…</div></div></div>
+      <div class="card"><div class="hd"><h3>Academia SHADOW</h3></div><div class="bd"><p class="small muted">Tu avance en capacitaciones y las evaluaciones pendientes aparecerán aquí. Esta sección se construye en un paso posterior.</p></div></div>
     </div>`;
+  avisosMonitora(perfil.id, estudiantes).then(av => { const el = document.getElementById('avisosMoni'); if (el) el.innerHTML = pintarAvisos(av, { vacio: 'Sin avisos por ahora.' }); });
   vista.querySelectorAll('[data-bit]').forEach(btn => btn.onclick = () => { estSel = estudiantes.find(e => e.id === btn.dataset.bit); ir('bitacora', { fecha: hoy }); });
   vista.querySelectorAll('[data-corr]').forEach(btn => btn.onclick = () => { const [id, f] = btn.dataset.corr.split('|'); estSel = estudiantes.find(e => e.id === id); ir('bitacora', { fecha: f }); });
   // resumen de entregas (30 días)
@@ -79,7 +99,7 @@ async function bitacora(params = {}) {
   const abrirWizard = () => armarWizard(zona, { estudiante: est, perfil, cat, bitacora: b, sub, fechaJornada: f, alTerminar: () => ir('inicio'), alSalir: () => ir('inicio') });
   if (b && (b.estado === 'enviada' || b.estado === 'corregida')) {
     for (const foto of sub.fotos) foto._url = await api.urlFoto(foto.storage_path);
-    zona.innerHTML = `<div class="alerta ok" style="margin-bottom:12px"><span class="tx">Esta bitácora ya fue enviada el ${fecha(b.enviada_en)} a las ${hora(b.enviada_en)}.${b.revisada_en ? ' Dirección ya la revisó.' : ''}</span></div><div class="card lectura"><div class="bd">${renderLectura({ b, sub, cat, est, confidencial: true })}</div></div>`;
+    zona.innerHTML = `<div class="alerta ok" style="margin-bottom:12px"><span class="tx">Esta bitácora ya fue enviada el ${fecha(b.enviada_en)} a las ${hora(b.enviada_en)}.${b.revisada_en ? ' Dirección ya la revisó.' : ''}</span></div>${b.revisada_en && b.observacion_direccion ? `<div class="alerta" style="margin-bottom:12px"><span class="tx"><b>Comentario de Dirección:</b> ${esc(b.observacion_direccion)}</span></div>` : ''}<div class="card lectura"><div class="bd">${renderLectura({ b, sub, cat, est, confidencial: true })}</div></div>`;
     return;
   }
   if (b && b.estado === 'requiere_correccion') {
@@ -107,8 +127,8 @@ async function miEstudiante() {
     <div class="card"><div class="hd"><h3>Familia</h3></div><div class="bd"><p>${esc(est.dinamica_familiar || '')}</p><ul class="lista">${tutores.map(t => `<li style="padding:8px 0"><span class="ava">${iniciales(t.nombre)}</span><div class="tx"><b>${esc(t.nombre)}</b><div class="m">${esc(t.parentesco || '')} · ${esc(t.telefono || '')}</div></div></li>`).join('')}</ul></div></div>
     <div class="card"><div class="hd"><h3>Objetivos de acompañamiento</h3></div><div class="bd sin"><ul class="lista">${objetivos.filter(o => o.visible_monitora).map(o => `<li><div class="tx"><b>${esc(o.descripcion)}</b><div class="m">${esc(o.estrategia || '')}</div></div><span class="tag ${o.estado === 'alcanzado' ? 'ok' : o.estado === 'pausado' ? 'gray' : ''}">${{ en_proceso: 'En proceso', alcanzado: 'Alcanzado', pausado: 'Pausado' }[o.estado]}</span></li>`).join('') || '<li class="muted">Sin objetivos registrados.</li>'}</ul></div></div>
     <div class="card"><div class="hd"><h3>Evaluaciones</h3></div><div class="bd sin"><ul class="lista">${evaluaciones.filter(e => e.visible_monitora).map(e => `<li><div class="tx"><b>${{ diagnostica: 'Diagnóstica', intermedia: 'Intermedia', final: 'Final' }[e.tipo]}</b><div class="m">${e.realizada ? `Aplicada el ${fecha(e.fecha)}${e.observaciones ? ' · ' + esc(e.observaciones) : ''}` : e.fecha ? `Programada para el ${fecha(e.fecha)}` : 'Pendiente de programar'}</div></div>${e.realizada ? '<span class="tag ok">Hecha</span>' : '<span class="tag warn">Pendiente</span>'}</li>`).join('') || '<li class="muted">Sin evaluaciones.</li>'}</ul></div></div>
-    <div class="card"><div class="hd"><h3>Terapias y especialistas</h3></div><div class="bd"><p class="small muted">Los datos de terapeutas, especialistas y sus horarios se agregan en un paso posterior (módulo de especialistas).</p></div></div>
-  </div>`;
+  </div>
+  <h3 style="margin:16px 0 8px;font-size:15px">Red de apoyo: terapias, especialistas y citas</h3>${await htmlRedApoyo(est.id, { editable: false })}`;
   vista.querySelector('#selEst')?.addEventListener('change', e => { estSel = estudiantes.find(x => x.id === e.target.value); miEstudiante(); });
 }
 

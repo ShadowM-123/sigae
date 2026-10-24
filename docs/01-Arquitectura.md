@@ -231,7 +231,7 @@ Edge Functions de Supabase (Deno/TypeScript). El frontend nunca guarda llaves se
 - **Mobile first** en monitora y familia: botones grandes, una pregunta a la vez en la bitácora, guardado automático, funciona con conexión intermitente (el borrador se guarda local y se sincroniza).
 - **Módulos JS** por dominio: `supabase.js` (conexión y configuración), `auth.js`, `bitacora.js`, `expediente.js`, `academia.js`, `materiales.js`, `solicitudes.js`, `reclutamiento.js`, `indicadores.js`, `pdf.js`, `ui.js`.
 - **Base falsa** en `web/assets/js/demo/supabase-falso.js`: implementa las mismas llamadas del cliente de Supabase que usa el frontend (consultas, auth, storage, rpc) con datos de muestra persistidos en el navegador. Se activa con `?demo=1`. Las fechas de la muestra se calculan respecto al día real, así la demo siempre luce actual.
-- Identidad visual: la de SHADOW (pendiente recibir logotipo y colores). Mientras, paleta neutra.
+- Identidad visual: derivada del logo de SHADOW (manzana roja, hoja verde, letras negras): verde como color principal, rojo para alertas, amarillo sol para la acción principal, fondos crema y tipografía redondeada (Nunito). Profesional pero dirigida a las infancias. Logo en `web/assets/img/`.
 
 ---
 

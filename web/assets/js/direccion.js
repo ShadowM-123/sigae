@@ -3,20 +3,30 @@ import * as api from './api.js';
 import { exigir } from './auth.js';
 import { marco, esc, fecha, fechaLarga, hora, horaCorta, hoyIso, sumarDias, diasEntre, toast, modal, cerrarModal, val, iniciales, nombreCorto, edadTexto, proximoCumple, estadoBitacora, valoracionTexto, dinero, relativo } from './ui.js';
 import { renderLectura, porcentajeAvance } from './bitacora.js';
+import * as C from './direccion-c.js';
+import { avisosDireccion, pintarAvisos } from './avisos.js';
 
 const perfil = await exigir(['direccion', 'asistente']);
 let cat = await api.catalogos();
 const vista = document.getElementById('vista');
 const hoy = hoyIso();
+const ctx = { perfil, cat, verEstudiante: id => verEstudiante(id), verFamilia: id => C.verFamilia(id, ctx, () => {}), nuevaTarea: al => nuevaTarea(al) };
 
 const TABS = [
-  { grupo: 'Operación' }, { id: 'inicio', ic: '▦', tx: 'Inicio' }, { id: 'bitacoras', ic: '✎', tx: 'Bitácoras' }, { id: 'estudiantes', ic: '☺', tx: 'Estudiantes' }, { id: 'monitoras', ic: '✦', tx: 'Monitoras' }, { id: 'familias', ic: '⌂', tx: 'Familias' },
-  { grupo: 'Seguimiento' }, { id: 'calendario', ic: '▦', tx: 'Calendario', pronto: true }, { id: 'evaluaciones', ic: '◔', tx: 'Evaluaciones', pronto: true }, { id: 'indicadores', ic: '↗', tx: 'Indicadores', pronto: true },
+  { grupo: 'Operación' }, { id: 'inicio', ic: '▦', tx: 'Inicio' }, { id: 'pendientes', ic: '☑', tx: 'Pendientes' }, { id: 'calendario', ic: '📅', tx: 'Calendario' }, { id: 'bitacoras', ic: '✎', tx: 'Bitácoras' }, { id: 'estudiantes', ic: '☺', tx: 'Estudiantes' }, { id: 'monitoras', ic: '✦', tx: 'Monitoras' }, { id: 'familias', ic: '⌂', tx: 'Familias' },
+  { grupo: 'Seguimiento' }, { id: 'evaluaciones', ic: '◔', tx: 'Evaluaciones', pronto: true }, { id: 'indicadores', ic: '↗', tx: 'Indicadores', pronto: true },
   { grupo: 'Equipo y red' }, { id: 'academia', ic: '▶', tx: 'Academia', pronto: true }, { id: 'materiales', ic: '▤', tx: 'Materiales', pronto: true }, { id: 'especialistas', ic: '✚', tx: 'Especialistas', pronto: true }, { id: 'reclutamiento', ic: '⇄', tx: 'Reclutamiento', pronto: true },
   { grupo: 'Configuración' }, { id: 'catalogos', ic: '☰', tx: 'Catálogos' },
 ];
 const { pintar: pintarTabs } = marco({ perfil, tabs: TABS, activa: 'inicio', onTab: ir, subtitulo: 'Dirección' });
-async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos }[tab] || inicio)(params); }
+async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx) }[tab] || inicio)(params); }
+
+function nuevaTarea(alGuardar) {
+  api.panoramaEstudiantes().then(pan => {
+    modal('Nueva tarea', `<div class="form"><div class="f"><label>Qué hay que hacer</label><input id="t_t"></div><div class="form g2"><div class="f"><label>Fecha</label><input type="date" id="t_f" value="${hoy}"></div><div class="f"><label>Tipo</label><select id="t_tipo"><option value="general">General</option><option value="visita_escolar">Visita escolar</option><option value="revision">Revisión</option><option value="reunion">Reunión</option></select></div></div><div class="f"><label>Estudiante (opcional)</label><select id="t_e"><option value="">—</option>${pan.map(e => `<option value="${e.id}">${esc(e.nombre)}</option>`).join('')}</select></div></div>`, `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="t_ok">Guardar</button>`);
+    document.getElementById('t_ok').onclick = async () => { if (!val('t_t')) { toast('Escribe la tarea.'); return; } await api.guardarTarea({ titulo: val('t_t'), fecha: val('t_f') || null, tipo: val('t_tipo'), estudiante_id: val('t_e') || null, estado: 'pendiente' }); cerrarModal(); alGuardar?.(); };
+  });
+}
 
 const TIPO_EVAL = { diagnostica: 'Diagnóstica', intermedia: 'Intermedia', final: 'Final' };
 const SENTIR_ATENCION = ['cansada', 'incomoda', 'animo_bajo', 'triste', 'enojada'];
@@ -33,7 +43,11 @@ async function verBitacora(b, est, moni, alCambiar) {
      <div class="lectura">${renderLectura({ b, sub, cat, est, monitora: moni, confidencial: true })}</div>`,
     `<button class="btn" data-cerrar>Cerrar</button><button class="btn" id="mDesc">Descargar PDF</button>${puedeRevisar ? `<button class="btn" id="mCorr">Pedir corrección</button><button class="btn p" id="mOk">Marcar revisada</button>` : ''}`);
   document.getElementById('mDesc').onclick = () => toast('La descarga en PDF (sin la sección confidencial) llega en el paso D.');
-  document.getElementById('mOk')?.addEventListener('click', async () => { await api.revisarBitacora(b.id, { revisadaPor: perfil.id }); cerrarModal(); toast('Bitácora marcada como revisada'); alCambiar?.(); });
+  document.getElementById('mOk')?.addEventListener('click', () => {
+    modal('Marcar como revisada', `<div class="f"><label>Comentario para la monitora (opcional)</label><textarea id="obsOk" placeholder="Ej. Muy buen registro de la conducta; gracias por el detalle."></textarea></div><div class="small muted" style="margin-top:8px">Si no escribes nada, solo queda el registro de que la revisaste.</div>`,
+      `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="okRev">Marcar revisada</button>`);
+    document.getElementById('okRev').onclick = async () => { await api.revisarBitacora(b.id, { revisadaPor: perfil.id, observacion: val('obsOk') || null }); cerrarModal(); toast('Bitácora marcada como revisada'); alCambiar?.(); };
+  });
   document.getElementById('mCorr')?.addEventListener('click', () => {
     modal('Pedir corrección', `<div class="f"><label>¿Qué debe corregir o completar la monitora?</label><textarea id="obs" placeholder="Ej. Falta describir qué pasó antes de la conducta…"></textarea></div><div class="small muted" style="margin-top:8px">La monitora verá este mensaje en su inicio y podrá editar la bitácora. Queda registro de la revisión.</div>`,
       `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="mEnviarCorr">Enviar a corrección</button>`);
@@ -67,9 +81,10 @@ async function inicio() {
       <div class="card"><div class="hd"><h3>Evaluaciones</h3><div class="sp"></div><span class="small muted">D = diagnóstica · I = intermedia · F = final</span></div><div class="bd sin"><ul class="lista">${pan.map(e => `<li><div class="tx"><b>${esc(nombreCorto(e.nombre))}</b><div class="m" style="margin-top:4px">${evalPorEst(e)}</div></div></li>`).join('')}</ul></div></div>
     </div>
     <div class="col" style="gap:14px">
-      <div class="card"><div class="hd"><h3>Pendientes</h3><div class="sp"></div><button class="btn s" id="btnTarea">＋ Tarea</button></div><div class="bd sin"><ul class="lista">
+      <div class="card"><div class="hd"><h3>Avisos y recordatorios</h3><div class="sp"></div><span class="small muted">Se generan solos cada día</span></div><div class="bd" id="avisosDir"><div class="small muted">Calculando…</div></div></div>
+      <div class="card"><div class="hd"><h3>Pendientes</h3><div class="sp"></div><button class="btn s ghost" data-ir="pendientes">Ver todos</button><button class="btn s" id="btnTarea">＋ Tarea</button></div><div class="bd sin"><ul class="lista">
         ${porRevisar.length ? `<li class="click" data-tab="bitacoras"><div class="tx"><b>${porRevisar.length} bitácora${porRevisar.length > 1 ? 's' : ''} por revisar</b><div class="m">La más antigua: ${fecha(porRevisar[porRevisar.length - 1].fecha_jornada)}</div></div><span class="tag warn">Revisar</span></li>` : ''}
-        ${solicitudes.map(s => { const e = pan.find(x => x.id === s.estudiante_id); return `<li><div class="tx"><b>${{ reporte_familia: 'Solicitud de reporte (familia)', reporte_especialista: 'Solicitud de reporte (especialista)', visita_escolar: 'Solicitud de visita escolar' }[s.tipo]}</b><div class="m">${esc(nombreCorto(e?.nombre || ''))} · ${esc(s.datos?.motivo || '')} · ${relativo(s.creado_en.slice(0, 10))}</div></div><span class="tag">${{ recibida: 'Recibida', en_revision: 'En revisión', info_adicional: 'Falta info', aprobada_en_proceso: 'En proceso' }[s.estado]}</span></li>`; }).join('')}
+        ${solicitudes.map(s => { const e = pan.find(x => x.id === s.estudiante_id); return `<li class="click" data-sol="${s.id}"><div class="tx"><b>${{ reporte_familia: 'Solicitud de reporte (familia)', reporte_especialista: 'Solicitud de reporte (especialista)', visita_escolar: 'Solicitud de visita escolar' }[s.tipo]}</b><div class="m">${esc(nombreCorto(e?.nombre || ''))} · ${esc(s.datos?.motivo || '')} · ${relativo(s.creado_en.slice(0, 10))}</div></div><span class="tag">${{ recibida: 'Recibida', en_revision: 'En revisión', info_adicional: 'Falta info', aprobada_en_proceso: 'En proceso' }[s.estado]}</span></li>`; }).join('')}
         ${tareas.map(t => { const e = pan.find(x => x.id === t.estudiante_id); return `<li><input type="checkbox" data-tarea="${t.id}" title="Marcar hecha"><div class="tx"><b>${esc(t.titulo)}</b><div class="m">${t.fecha ? fecha(t.fecha) + ' · ' + relativo(t.fecha) : ''}${e ? ' · ' + esc(nombreCorto(e.nombre)) : ''}</div></div>${t.fecha && t.fecha < hoy ? '<span class="tag bad">Atrasada</span>' : t.fecha === hoy ? '<span class="tag warn">Hoy</span>' : ''}</li>`; }).join('')}
         ${!pendientes ? '<li class="vacio">Sin pendientes. 🎉</li>' : ''}</ul></div></div>
       <div class="card"><div class="hd"><h3>Cumpleaños próximos</h3></div><div class="bd sin"><ul class="lista">${cumples.map(c => `<li><span class="ava">${c.c.dias === 0 ? '🎂' : iniciales(c.nombre)}</span><div class="tx"><b>${esc(c.nombre)}</b><div class="m">${c.tipo} · ${fecha(c.c.fecha)}</div></div><span class="tag ${c.c.dias <= 3 ? 'bad' : c.c.dias <= 7 ? 'warn' : c.c.dias <= 30 ? '' : 'gray'}">${c.c.dias === 0 ? '¡Hoy!' : `en ${c.c.dias} días`}</span></li>`).join('') || '<li class="vacio">Nadie cumple años en los próximos 60 días.</li>'}</ul></div><div class="bd small muted" style="border-top:1px solid var(--line)">Los recordatorios se envían un mes, una semana y tres días antes.</div></div>
@@ -79,28 +94,38 @@ async function inicio() {
   vista.querySelectorAll('[data-recordar]').forEach(b => b.onclick = () => toast('Recordatorio enviado a la monitora (en la versión real: aviso en la app y WhatsApp).'));
   vista.querySelector('[data-tab="bitacoras"]')?.addEventListener('click', () => ir('bitacoras', { estado: 'porrevisar' }));
   vista.querySelectorAll('[data-tarea]').forEach(c => c.onchange = async () => { await api.guardarTarea({ id: c.dataset.tarea, estado: 'hecha' }); toast('Tarea hecha'); inicio(); });
-  document.getElementById('btnTarea').onclick = () => { modal('Nueva tarea', `<div class="form"><div class="f"><label>Qué hay que hacer</label><input id="t_t"></div><div class="form g2"><div class="f"><label>Fecha</label><input type="date" id="t_f" value="${hoy}"></div><div class="f"><label>Tipo</label><select id="t_tipo"><option value="general">General</option><option value="visita_escolar">Visita escolar</option><option value="revision">Revisión</option><option value="reunion">Reunión</option></select></div></div><div class="f"><label>Estudiante (opcional)</label><select id="t_e"><option value="">—</option>${pan.map(e => `<option value="${e.id}">${esc(e.nombre)}</option>`).join('')}</select></div></div>`, `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="t_ok">Guardar</button>`); document.getElementById('t_ok').onclick = async () => { if (!val('t_t')) { toast('Escribe la tarea.'); return; } await api.guardarTarea({ titulo: val('t_t'), fecha: val('t_f') || null, tipo: val('t_tipo'), estudiante_id: val('t_e') || null, estado: 'pendiente' }); cerrarModal(); inicio(); }; };
+  vista.querySelectorAll('[data-sol]').forEach(li => li.onclick = () => C.verSolicitud(li.dataset.sol, ctx, inicio));
+  vista.querySelector('[data-ir="pendientes"]').onclick = () => ir('pendientes');
+  document.getElementById('btnTarea').onclick = () => nuevaTarea(inicio);
+  avisosDireccion().then(av => { const el = document.getElementById('avisosDir'); if (el) el.innerHTML = pintarAvisos(av, { vacio: 'Sin avisos para hoy.' }); });
 }
 
 /* ---------- Bitácoras ---------- */
 async function bitacoras(params = {}) {
   const pan = await api.panoramaEstudiantes(); const monis = await api.monitoras();
-  const filtro = { est: params.est || '', estado: params.estado || '', desde: params.desde || sumarDias(hoy, -14) };
+  const filtro = { est: params.est || '', moni: '', estado: params.estado || '', desde: params.desde || sumarDias(hoy, -14), conducta: false };
   const pintar = async () => {
     let bs = await api.bitacorasEntre(filtro.desde, hoy);
     if (filtro.est) bs = bs.filter(b => b.estudiante_id === filtro.est);
+    if (filtro.moni) bs = bs.filter(b => b.monitora_id === filtro.moni);
+    if (filtro.conducta) bs = bs.filter(b => (b.conductas || []).some(c => c !== 'ninguna'));
     if (filtro.estado === 'porrevisar') bs = bs.filter(b => ['enviada', 'corregida'].includes(b.estado) && !b.revisada_en); else if (filtro.estado) bs = bs.filter(b => b.estado === filtro.estado);
     const lect = await api.lecturasDe(bs.map(b => b.id));
-    document.getElementById('tablaBit').innerHTML = `<div class="tabla-wrap"><table><thead><tr><th>Jornada</th><th>Estudiante</th><th>Monitora</th><th>Día</th><th>Estado</th><th>Enviada</th><th>Revisión</th><th>Familia</th><th></th></tr></thead><tbody>
-      ${bs.map(b => { const e = pan.find(x => x.id === b.estudiante_id); const m = monis.find(x => x.id === b.monitora_id); const l = lect.find(x => x.bitacora_id === b.id); return `<tr class="click" data-id="${b.id}"><td class="mono">${fecha(b.fecha_jornada)}</td><td><b>${esc(nombreCorto(e?.nombre || ''))}</b></td><td>${esc(nombreCorto(m?.nombre || ''))}</td><td>${b.valoracion_dia ? `${b.valoracion_dia}/5` : '—'}</td><td>${estadoBitacora(b.estado)}</td><td class="small muted">${b.enviada_en ? fecha(b.enviada_en) + ' ' + hora(b.enviada_en) : '—'}</td><td class="small">${b.revisada_en ? `<span class="tag ok">Revisada</span>` : ['enviada', 'corregida'].includes(b.estado) ? '<span class="tag warn">Pendiente</span>' : ''}</td><td class="small">${l ? '👁 ' + fecha(l.leida_en) : '<span class="muted">—</span>'}</td><td><button class="btn s">Abrir</button></td></tr>`; }).join('') || '<tr><td colspan="9" class="vacio">Sin bitácoras con ese filtro.</td></tr>'}</tbody></table></div>`;
+    document.getElementById('resumenBit').textContent = `${bs.length} bitácora${bs.length === 1 ? '' : 's'} · ${bs.filter(b => ['enviada', 'corregida'].includes(b.estado) && !b.revisada_en).length} por revisar · ${bs.filter(b => (b.conductas || []).some(c => c !== 'ninguna')).length} con conducta registrada`;
+    document.getElementById('tablaBit').innerHTML = `<div class="tabla-wrap"><table><thead><tr><th>Jornada</th><th>Estudiante</th><th>Monitora</th><th>Día</th><th>Señales</th><th>Estado</th><th>Enviada</th><th>Revisión</th><th>Familia</th><th></th></tr></thead><tbody>
+      ${bs.map(b => { const e = pan.find(x => x.id === b.estudiante_id); const m = monis.find(x => x.id === b.monitora_id); const l = lect.find(x => x.bitacora_id === b.id); const cond = (b.conductas || []).some(c => c !== 'ninguna'); const tarde = b.enviada_en && b.enviada_en.slice(0, 10) > b.fecha_jornada; return `<tr class="click" data-id="${b.id}"><td class="mono">${fecha(b.fecha_jornada)}</td><td><b>${esc(nombreCorto(e?.nombre || ''))}</b></td><td>${esc(nombreCorto(m?.nombre || ''))}</td><td>${b.valoracion_dia ? `${b.valoracion_dia}/5` : '—'}</td><td>${cond ? '<span class="tag bad" title="Conducta que requiere seguimiento">Conducta</span> ' : ''}${b.valoracion_dia && b.valoracion_dia <= 2 ? '<span class="tag warn">Día difícil</span> ' : ''}${tarde ? '<span class="tag gray" title="Enviada después del día de la jornada">Atrasada</span>' : ''}</td><td>${estadoBitacora(b.estado)}</td><td class="small muted">${b.enviada_en ? fecha(b.enviada_en) + ' ' + hora(b.enviada_en) : '—'}</td><td class="small">${b.revisada_en ? `<span class="tag ok">Revisada</span>` : ['enviada', 'corregida'].includes(b.estado) ? '<span class="tag warn">Pendiente</span>' : ''}</td><td class="small">${l ? '👁 ' + fecha(l.leida_en) : '<span class="muted">—</span>'}</td><td><button class="btn s">Abrir</button></td></tr>`; }).join('') || '<tr><td colspan="10" class="vacio">Sin bitácoras con ese filtro.</td></tr>'}</tbody></table></div>`;
     document.querySelectorAll('#tablaBit tr[data-id]').forEach(tr => tr.onclick = () => { const b = bs.find(x => x.id === tr.dataset.id); const e = pan.find(x => x.id === b.estudiante_id); verBitacora(b, e, monis.find(x => x.id === b.monitora_id), pintar); });
   };
   vista.innerHTML = `<h1 class="titulo">Bitácoras</h1><div class="subtitulo">Todas las jornadas registradas. Abre una para leerla completa, marcarla revisada o pedir corrección.</div>
   <div class="row" style="margin-bottom:12px"><select class="f" id="fEst" style="padding:8px 10px;border:1px solid var(--line-2);border-radius:8px"><option value="">Todos los estudiantes</option>${pan.map(e => `<option value="${e.id}" ${filtro.est === e.id ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('')}</select>
     <select id="fEstado" style="padding:8px 10px;border:1px solid var(--line-2);border-radius:8px"><option value="">Cualquier estado</option><option value="porrevisar" ${filtro.estado === 'porrevisar' ? 'selected' : ''}>Por revisar</option><option value="enviada">Enviadas</option><option value="borrador">Borradores</option><option value="requiere_correccion">Requieren corrección</option><option value="corregida">Corregidas</option></select>
-    <label class="small muted">Desde <input type="date" id="fDesde" value="${filtro.desde}" style="padding:7px 10px;border:1px solid var(--line-2);border-radius:8px"></label></div>
+    <select id="fMoni" style="padding:8px 10px;border:1px solid var(--line-2);border-radius:8px"><option value="">Todas las monitoras</option>${monis.map(m => `<option value="${m.id}">${esc(m.nombre)}</option>`).join('')}</select>
+    <label class="small muted">Desde <input type="date" id="fDesde" value="${filtro.desde}" style="padding:7px 10px;border:1px solid var(--line-2);border-radius:8px"></label>
+    <label class="small muted" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="fCond"> Solo con conducta registrada</label></div>
+  <div class="small muted" id="resumenBit" style="margin-bottom:8px"></div>
   <div class="card"><div class="bd sin" id="tablaBit"></div></div>`;
   document.getElementById('fEst').onchange = e => { filtro.est = e.target.value; pintar(); }; document.getElementById('fEstado').onchange = e => { filtro.estado = e.target.value; pintar(); }; document.getElementById('fDesde').onchange = e => { filtro.desde = e.target.value; pintar(); };
+  document.getElementById('fMoni').onchange = e => { filtro.moni = e.target.value; pintar(); }; document.getElementById('fCond').onchange = e => { filtro.conducta = e.target.checked; pintar(); };
   pintar();
 }
 
@@ -128,7 +153,9 @@ async function verEstudiante(id) {
       <div class="card"><div class="hd"><h3>Objetivos</h3></div><div class="bd sin"><ul class="lista">${objetivos.map(o => `<li style="padding:8px 14px"><div class="tx"><b>${esc(o.descripcion)}</b><div class="m">${esc(o.estrategia || '')}</div></div><span class="tag ${o.estado === 'alcanzado' ? 'ok' : ''}">${{ en_proceso: 'En proceso', alcanzado: 'Alcanzado', pausado: 'Pausado' }[o.estado]}</span></li>`).join('') || '<li class="vacio">Sin objetivos.</li>'}</ul></div></div>
       <div class="card"><div class="hd"><h3>Evaluaciones</h3></div><div class="bd sin"><ul class="lista">${evals.map(ev => `<li style="padding:8px 14px"><div class="tx"><b>${TIPO_EVAL[ev.tipo]}</b><div class="m">${ev.realizada ? `Aplicada el ${fecha(ev.fecha)}` : ev.fecha ? `Programada ${fecha(ev.fecha)}${ev.fecha < hoy ? ' · <span class="tag bad">vencida</span>' : ''}` : 'Por programar'}${ev.observaciones ? ' · ' + esc(ev.observaciones) : ''}</div></div>${ev.realizada ? '<span class="tag ok">Hecha</span>' : '<span class="tag warn">Pendiente</span>'}</li>`).join('') || '<li class="vacio">Sin evaluaciones.</li>'}</ul></div></div>
       <div class="card"><div class="hd"><h3>Últimas bitácoras</h3><div class="sp"></div><button class="btn s" id="eDesc">Descargar semana / mes</button></div><div class="bd sin"><ul class="lista">${bs.map(b => `<li class="click" data-bit="${b.id}" style="padding:8px 14px"><div class="tx"><b>${fecha(b.fecha_jornada)}</b><div class="m">${b.valoracion_dia ? b.valoracion_dia + '/5 · ' : ''}${esc((b.resumen_narrativo || '').slice(0, 70))}</div></div>${estadoBitacora(b.estado)}</li>`).join('') || '<li class="vacio">Sin bitácoras.</li>'}</ul></div></div>
-    </div>`, `<button class="btn" data-cerrar>Cerrar</button><button class="btn" id="eEditar">Editar expediente</button>`);
+    </div>
+    <h4 style="margin:14px 0 8px">Red de apoyo: terapias, especialistas y citas</h4>${await C.htmlRedApoyo(id, { editable: true, prefijo: 'ra' })}`, `<button class="btn" data-cerrar>Cerrar</button><button class="btn" id="eEditar">Editar expediente</button>`);
+  C.engancharRedApoyo(document.getElementById('modal'), id, perfil.id, () => verEstudiante(id), { prefijo: 'ra' });
   document.getElementById('eEditar').onclick = () => editarEstudiante(e);
   document.getElementById('eDesc').onclick = () => toast('Las descargas semanal y mensual con resumen llegan en el paso D.');
   document.querySelectorAll('[data-bit]').forEach(li => li.onclick = () => { const b = bs.find(x => x.id === li.dataset.bit); verBitacora(b, e, monis.find(m => m.id === b.monitora_id), () => verEstudiante(id)); });
@@ -206,8 +233,9 @@ async function familias() {
   }
   vista.innerHTML = `<h1 class="titulo">Familias</h1><div class="subtitulo">Quién ha entrado, si leen las bitácoras y cómo van sus pagos.</div>
   <div class="card"><div class="bd sin"><div class="tabla-wrap"><table><thead><tr><th>Familia</th><th>Tutores</th><th>Estudiante(s)</th><th>Accesos 30 d</th><th>Bitácoras leídas (14 d)</th><th>Pago</th></tr></thead><tbody>
-  ${filas.map(({ f, tut, es, acc, pago, env, leidas }) => { const d = pago ? diasEntre(hoy, pago.fecha_vencimiento) : null; return `<tr><td><b>${esc(f.nombre_familia)}</b><div class="small muted">Día de pago: ${f.dia_de_pago ?? '—'} · ${dinero(f.monto_mensual)}</div></td><td class="small">${tut.map(t => `${esc(t.nombre)} <span class="muted">(${esc(t.parentesco || '')})</span>`).join('<br>')}</td><td class="small">${es.map(e => esc(nombreCorto(e.nombre))).join('<br>')}</td><td>${acc.length ? `<span class="tag ok">${acc.length} veces</span>` : '<span class="tag warn">No ha entrado</span>'}</td><td><span class="tag ${env && leidas / env >= .7 ? 'ok' : leidas ? 'warn' : 'gray'}">${leidas}/${env}</span></td><td class="small">${!pago ? '—' : pago.estado === 'vencido' ? `<span class="tag bad">Vencido ${fecha(pago.fecha_vencimiento)}</span>` : `<span class="tag ${d <= 3 ? 'warn' : ''}">Próximo ${fecha(pago.fecha_vencimiento)} · en ${d} d</span>`}</td></tr>`; }).join('')}</tbody></table></div></div></div>
-  <div class="small muted" style="margin-top:10px">Registrar pagos y editar fechas por familia: paso C.</div>`;
+  ${filas.map(({ f, tut, es, acc, pago, env, leidas }) => { const d = pago ? diasEntre(hoy, pago.fecha_vencimiento) : null; return `<tr class="click" data-fam="${f.id}"><td><b>${esc(f.nombre_familia)}</b><div class="small muted">Día de pago: ${f.dia_de_pago ?? '—'} · ${dinero(f.monto_mensual)}</div></td><td class="small">${tut.map(t => `${esc(t.nombre)} <span class="muted">(${esc(t.parentesco || '')})</span>`).join('<br>')}</td><td class="small">${es.map(e => esc(nombreCorto(e.nombre))).join('<br>')}</td><td>${acc.length ? `<span class="tag ok">${acc.length} veces</span>` : '<span class="tag warn">No ha entrado</span>'}</td><td><span class="tag ${env && leidas / env >= .7 ? 'ok' : leidas ? 'warn' : 'gray'}">${leidas}/${env}</span></td><td class="small">${!pago ? '—' : pago.estado === 'vencido' ? `<span class="tag bad">Vencido ${fecha(pago.fecha_vencimiento)}</span>` : `<span class="tag ${d <= 3 ? 'warn' : ''}">Próximo ${fecha(pago.fecha_vencimiento)} · en ${d} d</span>`}</td></tr>`; }).join('')}</tbody></table></div></div></div>
+  <div class="small muted" style="margin-top:10px">Abre una familia para configurar su día de pago, registrar pagos y ver su historial.</div>`;
+  vista.querySelectorAll('tr[data-fam]').forEach(tr => tr.onclick = () => C.verFamilia(tr.dataset.fam, ctx, () => familias()));
 }
 
 /* ---------- Catálogos ---------- */

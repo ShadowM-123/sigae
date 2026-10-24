@@ -38,7 +38,7 @@ export function marco({ perfil, tabs, activa, onTab, subtitulo, clase = '' }) {
   if (modoDemo) document.body.classList.add('con-demo');
   const top = document.createElement('div');
   top.innerHTML = `
-  <header class="topbar"><div class="logo">S</div><div class="marca"><b>SIGAE</b><small>${esc(subtitulo || 'SHADOW Monitoras Educativas')}</small></div>
+  <header class="topbar"><img class="logo" src="assets/img/logo-shadow.png" alt="Shadow" onerror="this.onerror=null;this.src='assets/img/logo-shadow.svg'"><div class="marca"><b>SIGAE</b><small>${esc(subtitulo || 'SHADOW Monitoras Educativas')}</small></div>
     <div class="quien"><b>${esc(perfil.nombre)}</b>${esc({ direccion: 'Dirección', asistente: 'Asistente de Dirección', monitora: 'Monitora educativa', familia: 'Familia', especialista: 'Especialista' }[perfil.rol] || '')}</div>
     <button class="salir" id="btnSalir">Salir</button></header>
   ${modoDemo ? '<div class="aviso-demo"><b>Demo.</b> Datos ficticios guardados solo en este navegador.<button id="btnReiniciarDemo">Reiniciar demo</button><button id="btnCambiarUsuario">Cambiar de usuario</button></div>' : ''}`;

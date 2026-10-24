@@ -3,7 +3,7 @@
 Plataforma de **SHADOW Monitoras Educativas** para operar el acompañamiento de estudiantes en la escuela: bitácoras diarias, expedientes, evaluaciones, familias, monitoras, Academia, materiales, especialistas y reclutamiento.
 
 ## Estado
-Fase de arquitectura cerrada (24-oct-2026). Construcción del frontend con base falsa en curso. No está en producción.
+Arquitectura v1 cerrada y pasos A y B construidos (24-oct-2026): núcleo, bitácora diaria en celular, portal de la familia y panel de Dirección, todo contra la base falsa. No está en producción.
 
 ## Documentos
 - [`docs/01-Arquitectura.md`](docs/01-Arquitectura.md) — el mapa del sistema (léelo primero).
@@ -15,7 +15,11 @@ Fase de arquitectura cerrada (24-oct-2026). Construcción del frontend con base 
 HTML + CSS + JavaScript sin compilación · Supabase (base de datos, usuarios, archivos, funciones, cron) · GitHub Pages (publicación) · Resend (correo).
 
 ## Cómo verlo en local
-Abre `web/index.html?demo=1` en el navegador. Con `demo=1` las páginas usan `.claude/supabase-falso.js` (datos de muestra, nada real).
+Las páginas usan módulos de JavaScript, así que necesitan un servidor estático (no abren con doble clic). Desde la carpeta del repo:
+```
+python -m http.server 8766
+```
+y entra a `http://localhost:8766/web/index.html?demo=1`. Con `demo=1` las páginas usan `web/assets/js/demo/supabase-falso.js` (datos ficticios guardados en tu navegador; el botón «Reiniciar demo» los regresa al inicio).
 
 ## Cómo publicar
 `git push` a `main`. GitHub Pages sirve la carpeta `web/`.

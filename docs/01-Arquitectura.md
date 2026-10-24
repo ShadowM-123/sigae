@@ -18,7 +18,7 @@ SIGAE es una aplicación web con **cinco tipos de usuario** y **dos formularios 
 | Backend | **Supabase** | Base de datos, usuarios y contraseñas, permisos por fila, archivos (fotos, currículums, materiales), funciones de servidor y tareas programadas. |
 | Correo | **Resend** | Invitaciones, agradecimientos, recordatorios, avisos. Dominio de SHADOW verificado. |
 
-**Principio de construcción:** la demo y el producto son el mismo código. El frontend se construye desde el día uno contra una «base falsa» local (`.claude/supabase-falso.js`) que imita a Supabase; cuando SHADOW aprueba, se cambia una línea de configuración y el mismo frontend habla con su Supabase real.
+**Principio de construcción:** la demo y el producto son el mismo código. El frontend se construye desde el día uno contra una «base falsa» (`web/assets/js/demo/supabase-falso.js`) que imita a Supabase y se activa con `?demo=1`; cuando SHADOW aprueba, se llena la configuración de `web/assets/js/supabase.js` y el mismo frontend habla con su Supabase real. La base falsa vive dentro de `web/` a propósito: así la demo también puede publicarse en GitHub Pages y verse desde un celular.
 
 **Principio de control:** la decisión siempre es de Dirección. El sistema sugiere (compatibilidad, resúmenes, alertas), nunca decide ni concluye por sí mismo. Nada se comparte con familias o especialistas sin que Dirección lo haya publicado o autorizado.
 
@@ -230,7 +230,7 @@ Edge Functions de Supabase (Deno/TypeScript). El frontend nunca guarda llaves se
 - **Una página por rol**, cada una con sus pestañas: `index.html` (entrada y redirección por rol), `direccion.html`, `monitora.html`, `familia.html`, `especialista.html`, `postulacion.html` (pública), `segunda-etapa.html` (pública por token).
 - **Mobile first** en monitora y familia: botones grandes, una pregunta a la vez en la bitácora, guardado automático, funciona con conexión intermitente (el borrador se guarda local y se sincroniza).
 - **Módulos JS** por dominio: `supabase.js` (conexión y configuración), `auth.js`, `bitacora.js`, `expediente.js`, `academia.js`, `materiales.js`, `solicitudes.js`, `reclutamiento.js`, `indicadores.js`, `pdf.js`, `ui.js`.
-- **Base falsa** en `.claude/supabase-falso.js`: implementa las mismas llamadas que usa el frontend con datos de muestra en memoria, para la demo y para probar sin tocar la base real. Se activa con `?demo=1` o desde la configuración.
+- **Base falsa** en `web/assets/js/demo/supabase-falso.js`: implementa las mismas llamadas del cliente de Supabase que usa el frontend (consultas, auth, storage, rpc) con datos de muestra persistidos en el navegador. Se activa con `?demo=1`. Las fechas de la muestra se calculan respecto al día real, así la demo siempre luce actual.
 - Identidad visual: la de SHADOW (pendiente recibir logotipo y colores). Mientras, paleta neutra.
 
 ---
@@ -253,7 +253,7 @@ sigae/
 │   ├── migrations/           ← esquema, RLS, catálogos iniciales (numeradas, nunca se editan las aplicadas)
 │   ├── functions/            ← Edge Functions
 │   └── seed/                 ← datos de muestra para pruebas
-└── .claude/                  ← base falsa y páginas de prueba locales
+└── .claude/                  ← páginas de prueba locales (la base falsa está en web/assets/js/demo/)
 ```
 
 - **Publicación:** GitHub Pages sirviendo la carpeta `web/` de la rama `main`. Cada `push` publica en 1–2 minutos. Dominio propio opcional (`app.shadow…`) apuntado a Pages.
@@ -310,3 +310,5 @@ La demo para SHADOW se presenta al terminar B (ya se ve el corazón) y de nuevo 
 | 9 | PDF desde el navegador en V1 | Sin servidor de PDF; suficiente para bitácoras y compendios. |
 | 10 | Entrevistas por enlace de agenda externo en V1 | Evita integrar OAuth de Google desde el inicio. |
 | 11 | Repositorio dentro de `Clientes\SHADOW — SIGAE\sigae` mientras se construye; se sube al GitHub de SHADOW en el paso I | Manuel lo tiene a la mano; el historial de git viaja completo. |
+| 12 | La base falsa vive en `web/assets/js/demo/` y no en `.claude/` | Para poder publicar la demo en GitHub Pages y enseñarla desde el celular de la directora. |
+| 13 | Capa `api.js` sin «embeds» de PostgREST: las uniones se hacen en JavaScript | La base falsa y la real se comportan igual; el código es más fácil de leer para el Claude de SHADOW. |

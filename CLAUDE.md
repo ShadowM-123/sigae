@@ -13,13 +13,20 @@ Eres el ingeniero de cabecera de SIGAE, el sistema de gestión de acompañamient
 - **Nunca se borra historial.** Asignaciones, bitácoras, evaluaciones, solicitudes y postulaciones se cierran o archivan; no se eliminan ni se sobreescriben al cambiar de etapa.
 - **Catálogos antes que código.** Toda lista de opciones (baño, bloques, estados de ánimo, formación…) vive en la tabla `catalogos` y se edita desde Dirección. No las quemes en el HTML.
 - **Sin secretos en el repo.** Llaves de Resend y de servicio solo en Supabase (secrets de Edge Functions). En el frontend solo la URL del proyecto y la llave pública (anon).
-- **Datos reales con cuidado.** Son menores de edad y sus familias. No copies datos reales a pruebas, capturas ni chats. Las pruebas usan `supabase/seed/` y `.claude/supabase-falso.js`.
+- **Datos reales con cuidado.** Son menores de edad y sus familias. No copies datos reales a pruebas, capturas ni chats. Las pruebas usan la base falsa (`?demo=1`) y `supabase/seed/`.
 
 ## Cómo está armado (resumen)
 - `web/`: frontend plano (HTML + CSS + JS por módulos, sin compilación). Lo publica GitHub Pages desde `main`. Un `git push` publica.
 - `supabase/migrations/`: esquema, RLS y catálogos. Numeradas. **Una migración aplicada no se edita**; se escribe otra.
 - `supabase/functions/`: Edge Functions (correos por Resend, postulación pública, compatibilidad, resúmenes, recordatorios, alta de usuarios).
-- `.claude/supabase-falso.js`: base de mentiras para probar sin tocar producción. Las páginas aceptan `?demo=1`.
+- `web/assets/js/demo/supabase-falso.js`: base de mentiras para probar sin tocar producción. Las páginas aceptan `?demo=1`. Si agregas una tabla o columna en una migración, agrégala también a la semilla de la base falsa.
+
+## Cómo correr en local
+Los archivos usan módulos de JavaScript, así que no abren bien con doble clic (`file://`). Sirve la carpeta del repo con cualquier servidor estático, por ejemplo:
+```
+python -m http.server 8766
+```
+y abre `http://localhost:8766/web/index.html?demo=1`.
 
 ## Cómo trabajar
 - Tareas chicas (texto, un campo, un estilo): edita, prueba en local con `?demo=1`, haz commit con mensaje claro en español y push.

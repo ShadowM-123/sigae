@@ -3,7 +3,7 @@
    auth, storage, rpc) sobre datos en memoria, persistidos en localStorage.
    Se activa con ?demo=1. NUNCA contiene datos reales. */
 
-const KEY = 'sigae_demo_db_v5';
+const KEY = 'sigae_demo_db_v6';
 const KEY_SESION = 'sigae_demo_sesion';
 
 /* ---------- utilidades de fechas ---------- */
@@ -185,12 +185,12 @@ function semilla() {
   const accesos_sesion = [];
   for (let off = -30; off <= 0; off++) { [P.m1, P.m2, P.m3].forEach((m, i) => { if ((off + i) % 2 === 0) accesos_sesion.push({ id: uuid(), perfil_id: m, fecha_hora: `${dia(off)}T07:${50 + i}:00`, dispositivo: 'celular' }); }); if (off % 3 === 0) accesos_sesion.push({ id: uuid(), perfil_id: P.f1, fecha_hora: `${dia(off)}T18:30:00`, dispositivo: 'celular' }); }
 
-  return { _ver: 5, _archivos: {}, eventos, especialistas_estudiante, citas, solicitud_historial, perfiles, familias, familia_tutores, estudiantes, monitoras, asignaciones, catalogos, accesos_sesion, bitacoras, bitacora_banos, bitacora_bloques, bitacora_fotos: [], bitacora_sentir_monitora, bitacora_lecturas, ciclos, objetivos, evaluaciones, pagos, tareas, solicitudes, notificaciones };
+  return { _ver: 6, _archivos: {}, resumenes: [], eventos, especialistas_estudiante, citas, solicitud_historial, perfiles, familias, familia_tutores, estudiantes, monitoras, asignaciones, catalogos, accesos_sesion, bitacoras, bitacora_banos, bitacora_bloques, bitacora_fotos: [], bitacora_sentir_monitora, bitacora_lecturas, ciclos, objetivos, evaluaciones, pagos, tareas, solicitudes, notificaciones };
 }
 
 /* ---------- motor ---------- */
 let DB = cargar();
-function cargar() { try { const s = localStorage.getItem(KEY); if (s) { const o = JSON.parse(s); if (o && o._ver === 5) return o; } } catch (e) {} const d = semilla(); guardar(d); return d; }
+function cargar() { try { const s = localStorage.getItem(KEY); if (s) { const o = JSON.parse(s); if (o && o._ver === 6) return o; } } catch (e) {} const d = semilla(); guardar(d); return d; }
 function guardar(d) { try { localStorage.setItem(KEY, JSON.stringify(d || DB)); } catch (e) { console.warn('No se pudo guardar la base falsa', e); } }
 export function reiniciarBaseFalsa() { localStorage.removeItem(KEY); DB = cargar(); }
 
@@ -234,7 +234,8 @@ class Consulta {
       const llaves = this.conflicto || PK[this.t] || ['id'];
       for (const r of rows) {
         const fila = { ...r }; if (!fila.id && !PK[this.t]) fila.id = uuid();
-        const idx = this.modo === 'upsert' ? tabla.findIndex(x => llaves.every(k => x[k] === fila[k])) : -1;
+        const tieneLlaves = llaves.every(k => fila[k] !== undefined);
+        const idx = this.modo === 'upsert' ? tabla.findIndex(x => tieneLlaves ? llaves.every(k => x[k] === fila[k]) : (fila.id && x.id === fila.id)) : -1;
         if (idx >= 0) { tabla[idx] = { ...tabla[idx], ...fila, actualizado_en: ahora }; data.push({ ...tabla[idx] }); }
         else { if (!fila.creado_en) fila.creado_en = ahora; fila.actualizado_en = ahora; tabla.push(fila); data.push({ ...fila }); }
       }

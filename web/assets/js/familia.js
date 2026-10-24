@@ -6,9 +6,14 @@ import { renderLectura } from './bitacora.js';
 import { htmlRedApoyo, engancharRedApoyo } from './direccion-c.js';
 import { montarCalendario } from './calendario.js';
 import { avisosFamilia, pintarAvisos, ESTADOS_SOL, tagSol } from './avisos.js';
+import { htmlResumen, nombrePeriodo, asegurarAutomaticos } from './resumen.js';
+import * as pdf from './pdf.js';
+import { modoDemo } from './supabase.js';
 
 const perfil = await exigir(['familia']);
 const cat = await api.catalogos();
+// Solo en demo: simula la tarea programada de Dirección para que haya un resumen publicado que ver.
+try { if (modoDemo && !sessionStorage.getItem('sigae_cron_resumenes')) { await asegurarAutomaticos(cat, { publicarDemo: true }); sessionStorage.setItem('sigae_cron_resumenes', '1'); } } catch (e) { console.warn(e); }
 const hijos = await api.estudiantesDeFamilia(perfil.id);
 const vista = document.getElementById('vista');
 let hijo = hijos[0] || null;
@@ -48,11 +53,14 @@ async function inicio() {
     <div class="card"><div class="hd"><h3>Próximo pago</h3><div class="sp"></div><button class="btn s" id="btnPagos">Historial</button></div><div class="bd">${pagoTexto}<div class="small muted">Si tienes dudas sobre tu pago, escríbenos a SHADOW.</div></div></div>
   </div>
   <div class="grid g2" style="margin-top:12px">
+    <div class="card"><div class="hd"><h3>Resumen de la semana</h3><div class="sp"></div><button class="btn s" id="btnResumenes">Ver todos</button></div><div class="bd" id="resumenFam"><div class="small muted">Cargando…</div></div></div>
     <div class="card"><div class="hd"><h3>Avisos</h3></div><div class="bd" id="avisosFam"><div class="small muted">Calculando…</div></div></div>
     <div class="card"><div class="hd"><h3>Recursos para familias</h3></div><div class="bd"><p class="small muted">Videos y guías sobre crianza, autorregulación, límites y los diagnósticos de nuestros estudiantes. Esta sección se habilita en un paso posterior.</p></div></div>
   </div>`;
   vista.querySelector('#selHijo')?.addEventListener('change', e => { hijo = hijos.find(x => x.id === e.target.value); inicio(); });
   avisosFamilia(perfil.id, hijo).then(av => { const el = document.getElementById('avisosFam'); if (el) el.innerHTML = pintarAvisos(av, { vacio: 'Sin avisos por ahora. Aquí verás recordatorios de pagos, citas y cumpleaños.' }); });
+  api.resumenesDe(hijo.id, { soloPublicados: true }).then(rs => { const el = document.getElementById('resumenFam'); if (!el) return; const r = rs[0]; if (!r) { el.innerHTML = '<div class="small muted">Cada semana SHADOW publica aquí un resumen de cómo le fue a tu hijo o hija. Aún no hay uno publicado.</div>'; return; } el.innerHTML = `<div class="small muted" style="margin-bottom:6px">${nombrePeriodo({ tipo: r.tipo, inicio: r.periodo_inicio, fin: r.periodo_fin })}</div><div class="lectura">${htmlResumen(r, { compacto: true })}</div><div class="row" style="margin-top:10px"><button class="btn s" id="btnResPdf">Descargar PDF</button></div>`; document.getElementById('btnResPdf').onclick = () => pdf.pdfResumen(r, hijo, moni); });
+  document.getElementById('btnResumenes').onclick = () => ir('bitacoras');
   document.getElementById('btnPagos').onclick = async () => { const ps = await api.pagosDe(hijo.familia.id); modal('Historial de pagos', `<table><thead><tr><th>Vence</th><th>Monto</th><th>Estado</th></tr></thead><tbody>${ps.slice().reverse().map(p => `<tr><td class="mono">${fecha(p.fecha_vencimiento)}</td><td class="mono">${dinero(p.monto)}</td><td>${p.estado === 'pagado' ? `<span class="tag ok">Pagado${p.pagado_en ? ' ' + fecha(p.pagado_en) : ''}</span>` : (p.estado === 'vencido' || p.fecha_vencimiento < hoy) ? '<span class="tag bad">Pendiente · vencido</span>' : '<span class="tag warn">Pendiente</span>'}</td></tr>`).join('') || '<tr><td colspan="3" class="vacio">Sin pagos registrados.</td></tr>'}</tbody></table><div class="small muted" style="margin-top:10px">Los pagos los registra SHADOW. Si ya pagaste y aún aparece pendiente, avísanos.</div>`); };
 
   const pintarBit = async () => {
@@ -72,10 +80,13 @@ async function bitacoras() {
   if (!hijo) return inicio();
   const bs = (await api.bitacorasDe(hijo.id, { desde: sumarDias(hoyIso(), -90) })).filter(b => b.estado !== 'borrador');
   const asig = await api.asignacionActiva(hijo.id); const moni = asig ? await api.monitora(asig.monitora_id) : null;
-  vista.innerHTML = `<h1 class="titulo">Bitácoras de ${esc(nombreCorto(hijo.nombre))}</h1><div class="subtitulo">Últimos 90 días. Toca una para leerla.</div>${selectorHijo()}
+  const rs = await api.resumenesDe(hijo.id, { soloPublicados: true });
+  vista.innerHTML = `<h1 class="titulo">Bitácoras de ${esc(nombreCorto(hijo.nombre))}</h1><div class="subtitulo">Últimos 90 días. Toca una para leerla o descargarla.</div>${selectorHijo()}
+  <div class="card" style="margin-bottom:12px"><div class="hd"><h3>Resúmenes publicados por SHADOW</h3></div><div class="bd sin"><ul class="lista">${rs.map(r => `<li class="click" data-res="${r.id}"><div class="tx"><b>${r.tipo === 'semanal' ? 'Semana' : 'Mes'} · ${fecha(r.periodo_inicio)} – ${fecha(r.periodo_fin)}</b><div class="m">${esc((r.contenido?.secciones?.avances || [])[0] || (r.contenido?.secciones?.relevantes || [])[0] || '')}</div></div><span class="btn s">Ver</span></li>`).join('') || '<li class="vacio">Aún no hay resúmenes publicados.</li>'}</ul></div></div>
   <div class="card"><div class="bd sin"><ul class="lista">${bs.map(b => `<li class="click" data-id="${b.id}"><div class="ava" title="Valoración del día">${b.valoracion_dia || '·'}</div><div class="tx"><b>${fechaLarga(b.fecha_jornada)}</b><div class="m">${b.valoracion_dia ? valoracionTexto(b.valoracion_dia) : ''}${b.resumen_narrativo ? ' · ' + esc(b.resumen_narrativo.slice(0, 80)) + (b.resumen_narrativo.length > 80 ? '…' : '') : ''}</div></div><span class="muted small">${hora(b.enviada_en)}</span></li>`).join('') || '<li class="vacio">Aún no hay bitácoras.</li>'}</ul></div></div>`;
   vista.querySelector('#selHijo')?.addEventListener('change', e => { hijo = hijos.find(x => x.id === e.target.value); bitacoras(); });
-  vista.querySelectorAll('[data-id]').forEach(li => li.onclick = async () => { const b = bs.find(x => x.id === li.dataset.id); const m = modal(`Bitácora · ${fecha(b.fecha_jornada)}`, '<div class="vacio">Cargando…</div>'); m.querySelector('#mBd').innerHTML = `<div class="lectura">${await lecturaDe(b, hijo, moni)}</div>`; });
+  vista.querySelectorAll('[data-id]').forEach(li => li.onclick = async () => { const b = bs.find(x => x.id === li.dataset.id); const m = modal(`Bitácora · ${fecha(b.fecha_jornada)}`, '<div class="vacio">Cargando…</div>', `<button class="btn" data-cerrar>Cerrar</button><button class="btn" id="fPdf">Descargar PDF</button>`); m.querySelector('#mBd').innerHTML = `<div class="lectura">${await lecturaDe(b, hijo, moni)}</div>`; document.getElementById('fPdf').onclick = () => pdf.pdfBitacora(b, hijo, moni, cat); });
+  vista.querySelectorAll('[data-res]').forEach(li => li.onclick = () => { const r = rs.find(x => x.id === li.dataset.res); modal(`Resumen de ${nombreCorto(hijo.nombre)}`, `<div class="small muted" style="margin-bottom:8px">${nombrePeriodo({ tipo: r.tipo, inicio: r.periodo_inicio, fin: r.periodo_fin })}</div><div class="lectura">${htmlResumen(r)}</div>`, `<button class="btn" data-cerrar>Cerrar</button><button class="btn p" id="rPdf">Descargar PDF</button>`); document.getElementById('rPdf').onclick = () => pdf.pdfResumen(r, hijo, moni); });
 }
 
 /* ---------- Terapias, especialistas, citas y solicitud de reporte ---------- */

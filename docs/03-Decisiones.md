@@ -2,6 +2,13 @@
 
 Las decisiones de arranque están en `01-Arquitectura.md` §11. Aquí van las posteriores, la más reciente arriba. Formato: fecha · decisión · por qué · quién.
 
+## 2026-10-24 — Paso D construido: resúmenes y descargas
+- **Resúmenes V1 con reglas, sin IA** (`resumen.js`): a partir de las respuestas estructuradas y los resúmenes narrativos arma cinco secciones (acontecimientos relevantes, avances, dificultades recurrentes, objetivos que requieren atención, temas de seguimiento) con métricas comparadas contra el periodo anterior. El generador **nunca lee** `bitacora_sentir_monitora`. — Claude.
+- Flujo: una tarea programada (simulada en demo al entrar) crea el **borrador** de la semana y del mes pasados por estudiante; Dirección lo revisa y edita en un editor por secciones y lo **publica**; la familia solo ve lo publicado; la monitora ve borradores y publicados de su estudiante y puede generar el suyo para descargar, pero no publicar (RLS en `0004_resumenes.sql`). — Claude.
+- **PDF desde el navegador** sin ventanas emergentes: el documento se arma en un `iframe` dentro de la página con botón «Imprimir o guardar como PDF» (`pdf.js`). Tres documentos: bitácora diaria, compendio semanal/mensual (resumen + cada bitácora) y resumen solo. Ninguno incluye la sección confidencial, sin importar quién descargue. — Claude.
+- Guardados por `id` usan `update`, no `upsert` parcial (en Postgres un upsert con columnas NOT NULL ausentes falla). Aplica a estudiantes, tareas, eventos, familias, pagos, especialistas, citas y resúmenes. — Claude.
+- Pendiente para V2: generación de PDF en servidor (sin abrir el navegador) y redacción con IA opcional del resumen. — anotado.
+
 ## 2026-10-24 — Paso C construido + identidad visual
 - **Identidad visual:** Manuel entregó el logo de SHADOW (letras negras con contorno, manzana roja, «MONITORAS EDUCATIVAS» en verde, «by Halo Mental») y pidió colores de educación a la infancia, profesionales pero no corporativos. La paleta sale del logo: verde hoja como color principal (#3A8A2E / #55A83F), rojo manzana para alertas y acentos (#E23B2E), amarillo sol para el botón principal (#F6C344), fondos crema cálidos (#FFFBF4) y tipografía redondeada Nunito. Los nombres de variables CSS se conservan (`--navy` = verde principal, `--amber` = sol) para no tocar el JavaScript. — Manuel / Claude.
 - El logo se carga desde `web/assets/img/logo-shadow.png` si existe; mientras tanto se usa una versión SVG aproximada (`logo-shadow.svg`). Falta colocar el PNG original. — Claude.

@@ -218,7 +218,7 @@ Edge Functions de Supabase (Deno/TypeScript). El frontend nunca guarda llaves se
 | `seleccionar-monitora` | Botón en Dirección | Crea el usuario (invitación por correo), `perfiles` y `monitoras` desde la postulación. |
 | `crear-usuario` | Botón en Dirección | Alta de familias, especialistas y asistentes con invitación por correo. |
 
-**PDF:** en la versión 1 los documentos (bitácora, compendio semanal/mensual, reporte) se arman en el navegador con una vista imprimible y se guardan como PDF desde ahí; evita servidores de PDF. Si hace falta generación automática sin abrir el navegador, se añade después como función.
+**PDF:** en la versión 1 los documentos (bitácora diaria, compendio semanal/mensual con su resumen, resumen solo) se arman en el navegador dentro de una vista de impresión (`pdf.js`, sin ventanas emergentes) y se guardan como PDF desde ahí; evita servidores de PDF. Ningún documento incluye la sección confidencial de la monitora. Si hace falta generación automática sin abrir el navegador, se añade después como función.
 
 **Agenda de entrevistas:** SIGAE guarda el enlace de la página de citas de Dirección (Google Calendar «Citas» o similar) y lo manda en el correo; al confirmarse, Dirección registra la entrevista en SIGAE. Integración automática con el calendario: fase posterior.
 

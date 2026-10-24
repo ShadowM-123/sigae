@@ -5,6 +5,11 @@ import { hoyIso, sumarDias } from './ui.js';
 
 const ok = r => { if (r.error) { console.error(r.error); throw new Error(r.error.message || 'Error de base de datos'); } return r.data; };
 const porId = arr => Object.fromEntries((arr || []).map(x => [x.id, x]));
+/** Guarda una fila: con `id` actualiza solo las columnas enviadas; sin `id` inserta. (Un upsert parcial por id falla en Postgres por las columnas NOT NULL.) */
+async function guardarPorId(tabla, fila) {
+  if (fila.id) { const { id, ...resto } = fila; return ok(await db.from(tabla).update(resto).eq('id', id).select().single()); }
+  return ok(await db.from(tabla).insert(fila).select().single());
+}
 
 /* ---------- catálogos (con caché) ---------- */
 let _cat = null;
@@ -24,7 +29,7 @@ export async function perfiles(rol) { let q = db.from('perfiles').select('*').eq
 export async function perfil(id) { return ok(await db.from('perfiles').select('*').eq('id', id).maybeSingle()); }
 export async function estudiantes() { return ok(await db.from('estudiantes').select('*').eq('activo', true).order('nombre')); }
 export async function estudiante(id) { return ok(await db.from('estudiantes').select('*').eq('id', id).maybeSingle()); }
-export async function guardarEstudiante(e) { return ok(await db.from('estudiantes').upsert(e).select().single()); }
+export async function guardarEstudiante(e) { return guardarPorId('estudiantes', e); }
 export async function familia(id) { return ok(await db.from('familias').select('*').eq('id', id).maybeSingle()); }
 export async function familias() { return ok(await db.from('familias').select('*').order('nombre_familia')); }
 export async function tutoresDe(familiaId) {
@@ -122,17 +127,17 @@ export async function proximoPago(familiaId) {
   return ps.find(p => p.estado === 'pendiente' && p.fecha_vencimiento >= hoy) || null;
 }
 export async function tareas() { return ok(await db.from('tareas').select('*').eq('estado', 'pendiente').order('fecha')); }
-export async function guardarTarea(t) { return ok(await db.from('tareas').upsert(t).select().single()); }
+export async function guardarTarea(t) { return guardarPorId('tareas', t); }
 export async function solicitudesAbiertas() { return ok(await db.from('solicitudes').select('*').in('estado', ['recibida', 'en_revision', 'info_adicional', 'aprobada_en_proceso']).order('creado_en', { ascending: false })); }
 export async function solicitudesDe(perfilId) { return ok(await db.from('solicitudes').select('*').eq('solicitante_id', perfilId).order('creado_en', { ascending: false })); }
 export async function accesosDe(perfilIds, desde) { if (!perfilIds.length) return []; return ok(await db.from('accesos_sesion').select('*').in('perfil_id', perfilIds).gte('fecha_hora', desde)); }
 
 /* ---------- paso C: calendario, pagos, citas, especialistas, solicitudes ---------- */
 export async function eventosEntre(desde, hasta) { return ok(await db.from('eventos').select('*').gte('fecha', desde).lte('fecha', hasta).order('fecha').order('hora')); }
-export async function guardarEvento(e) { return ok(await db.from('eventos').upsert(e).select().single()); }
+export async function guardarEvento(e) { return guardarPorId('eventos', e); }
 export async function borrarEvento(id) { return ok(await db.from('eventos').delete().eq('id', id)); }
-export async function guardarFamilia(f) { return ok(await db.from('familias').upsert(f).select().single()); }
-export async function guardarPago(p) { return ok(await db.from('pagos').upsert(p).select().single()); }
+export async function guardarFamilia(f) { return guardarPorId('familias', f); }
+export async function guardarPago(p) { return guardarPorId('pagos', p); }
 export async function borrarPago(id) { return ok(await db.from('pagos').delete().eq('id', id)); }
 /** Crea los pagos que falten para los próximos `meses` meses según el día de pago de la familia. */
 export async function generarPagos(fam, meses = 3) {
@@ -149,10 +154,10 @@ export async function generarPagos(fam, meses = 3) {
 export async function pagosTodos() { return ok(await db.from('pagos').select('*').order('fecha_vencimiento')); }
 export async function especialistasDe(estId) { return ok(await db.from('especialistas_estudiante').select('*').eq('estudiante_id', estId).eq('activo', true).order('nombre')); }
 export async function especialistasTodos() { return ok(await db.from('especialistas_estudiante').select('*').eq('activo', true)); }
-export async function guardarEspecialista(e) { return ok(await db.from('especialistas_estudiante').upsert(e).select().single()); }
+export async function guardarEspecialista(e) { return guardarPorId('especialistas_estudiante', e); }
 export async function citasDe(estId, { desde } = {}) { let q = db.from('citas').select('*').eq('estudiante_id', estId).order('fecha').order('hora'); if (desde) q = q.gte('fecha', desde); return ok(await q); }
 export async function citasEntre(desde, hasta) { return ok(await db.from('citas').select('*').gte('fecha', desde).lte('fecha', hasta).order('fecha').order('hora')); }
-export async function guardarCita(c) { return ok(await db.from('citas').upsert(c).select().single()); }
+export async function guardarCita(c) { return guardarPorId('citas', c); }
 export async function borrarCita(id) { return ok(await db.from('citas').delete().eq('id', id)); }
 export async function solicitudesTodas() { return ok(await db.from('solicitudes').select('*').order('creado_en', { ascending: false })); }
 export async function solicitud(id) { return ok(await db.from('solicitudes').select('*').eq('id', id).maybeSingle()); }
@@ -169,6 +174,20 @@ export async function cambiarEstadoSolicitud(id, estado, nota, perfilId, extra =
 export async function historialSolicitud(id) { return ok(await db.from('solicitud_historial').select('*').eq('solicitud_id', id).order('fecha')); }
 export async function tareasTodas() { return ok(await db.from('tareas').select('*').order('fecha')); }
 export async function evaluacionesEntre(desde, hasta) { return ok(await db.from('evaluaciones').select('*').gte('fecha', desde).lte('fecha', hasta)); }
+
+/* ---------- paso D: resúmenes y lotes de subtablas ---------- */
+export async function resumenesDe(estId, { soloPublicados = false } = {}) { let q = db.from('resumenes').select('*').eq('estudiante_id', estId).order('periodo_inicio', { ascending: false }); if (soloPublicados) q = q.eq('estado', 'publicado'); return ok(await q); }
+export async function resumenesTodos() { return ok(await db.from('resumenes').select('*').order('periodo_inicio', { ascending: false })); }
+export async function resumenExistente(estId, tipo, inicio) { return ok(await db.from('resumenes').select('*').eq('estudiante_id', estId).eq('tipo', tipo).eq('periodo_inicio', inicio).maybeSingle()); }
+export async function guardarResumen(r) { return r.id ? guardarPorId('resumenes', r) : ok(await db.from('resumenes').upsert(r, { onConflict: 'estudiante_id,tipo,periodo_inicio' }).select().single()); }
+/** Subtablas de varias bitácoras de una vez (sin la sección confidencial). Devuelve un mapa por id de bitácora. */
+export async function subtablasLote(bitIds) {
+  const mapa = Object.fromEntries(bitIds.map(id => [id, { banos: [], bloques: [], fotos: [], sentir: null }]));
+  if (!bitIds.length) return mapa;
+  const [banos, bloques, fotos] = await Promise.all([db.from('bitacora_banos').select('*').in('bitacora_id', bitIds).order('hora_aprox'), db.from('bitacora_bloques').select('*').in('bitacora_id', bitIds).order('hora_inicio'), db.from('bitacora_fotos').select('*').in('bitacora_id', bitIds).order('creado_en')]);
+  (banos.data || []).forEach(x => mapa[x.bitacora_id]?.banos.push(x)); (bloques.data || []).forEach(x => mapa[x.bitacora_id]?.bloques.push(x)); (fotos.data || []).forEach(x => mapa[x.bitacora_id]?.fotos.push(x));
+  return mapa;
+}
 
 /* ---------- cálculos compartidos ---------- */
 /** Días hábiles del estudiante entre dos fechas (según dias_asistencia). */

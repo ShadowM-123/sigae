@@ -4,22 +4,27 @@ import { exigir } from './auth.js';
 import { marco, esc, fecha, fechaLarga, hora, horaCorta, hoyIso, sumarDias, diasEntre, toast, modal, cerrarModal, val, iniciales, nombreCorto, edadTexto, proximoCumple, estadoBitacora, valoracionTexto, dinero, relativo } from './ui.js';
 import { renderLectura, porcentajeAvance } from './bitacora.js';
 import * as C from './direccion-c.js';
+import * as D from './direccion-d.js';
+import * as pdf from './pdf.js';
 import { avisosDireccion, pintarAvisos } from './avisos.js';
+import { modoDemo } from './supabase.js';
 
 const perfil = await exigir(['direccion', 'asistente']);
 let cat = await api.catalogos();
 const vista = document.getElementById('vista');
 const hoy = hoyIso();
+// Simula la tarea programada de los lunes y del día 1: borradores de resumen para todos (en demo, publica uno para que la familia lo vea).
+try { if (!sessionStorage.getItem('sigae_cron_resumenes')) { await D.asegurarAutomaticos(cat, { publicarDemo: modoDemo }); sessionStorage.setItem('sigae_cron_resumenes', '1'); } } catch (e) { console.warn(e); }
 const ctx = { perfil, cat, verEstudiante: id => verEstudiante(id), verFamilia: id => C.verFamilia(id, ctx, () => {}), nuevaTarea: al => nuevaTarea(al) };
 
 const TABS = [
   { grupo: 'Operación' }, { id: 'inicio', ic: '▦', tx: 'Inicio' }, { id: 'pendientes', ic: '☑', tx: 'Pendientes' }, { id: 'calendario', ic: '📅', tx: 'Calendario' }, { id: 'bitacoras', ic: '✎', tx: 'Bitácoras' }, { id: 'estudiantes', ic: '☺', tx: 'Estudiantes' }, { id: 'monitoras', ic: '✦', tx: 'Monitoras' }, { id: 'familias', ic: '⌂', tx: 'Familias' },
-  { grupo: 'Seguimiento' }, { id: 'evaluaciones', ic: '◔', tx: 'Evaluaciones', pronto: true }, { id: 'indicadores', ic: '↗', tx: 'Indicadores', pronto: true },
+  { grupo: 'Seguimiento' }, { id: 'resumenes', ic: '▤', tx: 'Resúmenes' }, { id: 'evaluaciones', ic: '◔', tx: 'Evaluaciones', pronto: true }, { id: 'indicadores', ic: '↗', tx: 'Indicadores', pronto: true },
   { grupo: 'Equipo y red' }, { id: 'academia', ic: '▶', tx: 'Academia', pronto: true }, { id: 'materiales', ic: '▤', tx: 'Materiales', pronto: true }, { id: 'especialistas', ic: '✚', tx: 'Especialistas', pronto: true }, { id: 'reclutamiento', ic: '⇄', tx: 'Reclutamiento', pronto: true },
   { grupo: 'Configuración' }, { id: 'catalogos', ic: '☰', tx: 'Catálogos' },
 ];
 const { pintar: pintarTabs } = marco({ perfil, tabs: TABS, activa: 'inicio', onTab: ir, subtitulo: 'Dirección' });
-async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx) }[tab] || inicio)(params); }
+async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx), resumenes: () => D.resumenes(vista, ctx) }[tab] || inicio)(params); }
 
 function nuevaTarea(alGuardar) {
   api.panoramaEstudiantes().then(pan => {
@@ -42,7 +47,7 @@ async function verBitacora(b, est, moni, alCambiar) {
      ${b.observacion_direccion && b.estado === 'requiere_correccion' ? `<div class="alerta bad" style="margin-bottom:10px"><span class="tx"><b>Corrección pedida:</b> ${esc(b.observacion_direccion)}</span></div>` : ''}
      <div class="lectura">${renderLectura({ b, sub, cat, est, monitora: moni, confidencial: true })}</div>`,
     `<button class="btn" data-cerrar>Cerrar</button><button class="btn" id="mDesc">Descargar PDF</button>${puedeRevisar ? `<button class="btn" id="mCorr">Pedir corrección</button><button class="btn p" id="mOk">Marcar revisada</button>` : ''}`);
-  document.getElementById('mDesc').onclick = () => toast('La descarga en PDF (sin la sección confidencial) llega en el paso D.');
+  document.getElementById('mDesc').onclick = () => pdf.pdfBitacora(b, est, moni, cat);
   document.getElementById('mOk')?.addEventListener('click', () => {
     modal('Marcar como revisada', `<div class="f"><label>Comentario para la monitora (opcional)</label><textarea id="obsOk" placeholder="Ej. Muy buen registro de la conducta; gracias por el detalle."></textarea></div><div class="small muted" style="margin-top:8px">Si no escribes nada, solo queda el registro de que la revisaste.</div>`,
       `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="okRev">Marcar revisada</button>`);
@@ -154,10 +159,12 @@ async function verEstudiante(id) {
       <div class="card"><div class="hd"><h3>Evaluaciones</h3></div><div class="bd sin"><ul class="lista">${evals.map(ev => `<li style="padding:8px 14px"><div class="tx"><b>${TIPO_EVAL[ev.tipo]}</b><div class="m">${ev.realizada ? `Aplicada el ${fecha(ev.fecha)}` : ev.fecha ? `Programada ${fecha(ev.fecha)}${ev.fecha < hoy ? ' · <span class="tag bad">vencida</span>' : ''}` : 'Por programar'}${ev.observaciones ? ' · ' + esc(ev.observaciones) : ''}</div></div>${ev.realizada ? '<span class="tag ok">Hecha</span>' : '<span class="tag warn">Pendiente</span>'}</li>`).join('') || '<li class="vacio">Sin evaluaciones.</li>'}</ul></div></div>
       <div class="card"><div class="hd"><h3>Últimas bitácoras</h3><div class="sp"></div><button class="btn s" id="eDesc">Descargar semana / mes</button></div><div class="bd sin"><ul class="lista">${bs.map(b => `<li class="click" data-bit="${b.id}" style="padding:8px 14px"><div class="tx"><b>${fecha(b.fecha_jornada)}</b><div class="m">${b.valoracion_dia ? b.valoracion_dia + '/5 · ' : ''}${esc((b.resumen_narrativo || '').slice(0, 70))}</div></div>${estadoBitacora(b.estado)}</li>`).join('') || '<li class="vacio">Sin bitácoras.</li>'}</ul></div></div>
     </div>
+    <div style="margin-top:12px">${await D.htmlResumenesEstudiante(id)}</div>
     <h4 style="margin:14px 0 8px">Red de apoyo: terapias, especialistas y citas</h4>${await C.htmlRedApoyo(id, { editable: true, prefijo: 'ra' })}`, `<button class="btn" data-cerrar>Cerrar</button><button class="btn" id="eEditar">Editar expediente</button>`);
   C.engancharRedApoyo(document.getElementById('modal'), id, perfil.id, () => verEstudiante(id), { prefijo: 'ra' });
+  D.engancharResumenesEstudiante(document.getElementById('modal'), { ...e, monitora: moni }, ctx, () => verEstudiante(id));
   document.getElementById('eEditar').onclick = () => editarEstudiante(e);
-  document.getElementById('eDesc').onclick = () => toast('Las descargas semanal y mensual con resumen llegan en el paso D.');
+  document.getElementById('eDesc').onclick = () => D.elegirPeriodo(`Descargar compendio de ${nombreCorto(e.nombre)}`, p => D.descargarCompendio(e, p, cat));
   document.querySelectorAll('[data-bit]').forEach(li => li.onclick = () => { const b = bs.find(x => x.id === li.dataset.bit); verBitacora(b, e, monis.find(m => m.id === b.monitora_id), () => verEstudiante(id)); });
   document.getElementById('eCambiar').onclick = () => {
     modal(moni ? 'Cambiar monitora' : 'Asignar monitora', `<div class="form"><div class="f"><label>Nueva monitora</label><select id="cm_m">${monis.filter(m => m.id !== moni?.id && (m.estado || 'activa') === 'activa').map(m => `<option value="${m.id}">${esc(m.nombre)} · ${esc((m.especialidades || []).join(', '))}</option>`).join('')}</select></div>${moni ? `<div class="f"><label>Motivo del cambio</label><input id="cm_motivo" placeholder="Ej. cambio de horario de la monitora"></div>` : ''}<div class="alerta"><span class="tx small">La monitora anterior pierde el acceso al expediente desde hoy. Sus bitácoras, evaluaciones y reportes se conservan tal cual. La nueva ve el expediente completo para dar continuidad.</span></div></div>`,

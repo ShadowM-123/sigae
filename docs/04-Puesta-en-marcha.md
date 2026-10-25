@@ -15,7 +15,7 @@ Este documento dice **dónde vive SIGAE en internet**, con qué cuentas, y cómo
 | Fecha | Quién | Dónde | Rol | Por qué |
 |---|---|---|---|---|
 | 2026-10-25 | menyacosta28-glitch (Manuel Acosta, Biné) | GitHub `ShadowM-123/sigae` | Colaborador (write) | Subir el código durante el desarrollo. |
-| 2026-10-25 | menyacosta.28@gmail.com | Supabase org «Shadow Monitoras Educativas» | Administrador | Crear el proyecto, aplicar migraciones y desplegar funciones. |
+| 2026-10-25 | menyacosta.28@gmail.com | Supabase org «Shadow Monitoras Educativas» | Developer | Aplicar migraciones, cargar datos y desplegar funciones (no crea ni borra proyectos). |
 
 Cuando el desarrollo termine, Dirección puede bajar estos accesos a «Developer» / lectura, o quitarlos.
 
@@ -29,7 +29,7 @@ Cuando el desarrollo termine, Dirección puede bajar estos accesos a «Developer
 Settings → Pages → *Build and deployment* → Source: **Deploy from a branch** → Branch: `main`, carpeta `/ (root)` → Save. Tarda 1–3 minutos la primera vez.
 
 ## 3. El proyecto de Supabase
-- Nombre: `sigae`. Región: `us-east-1`. Creado dentro de la organización de SHADOW.
+- Nombre: `sigae`. Ref: `osqeypstmwzguvwokomc`. Región: Americas (us-east-1). Creado el 2026-10-25 desde la cuenta de SHADOW, con «Enable automatic RLS» activado. URL: `https://osqeypstmwzguvwokomc.supabase.co`.
 - La **URL del proyecto y la llave pública (anon)** van en `web/assets/js/supabase.js` (`CONFIG`). Son públicas por diseño: la seguridad la ponen las políticas RLS.
 - La **llave de servicio (service_role)** y la **llave de Resend** NUNCA van al repo: se guardan como *secrets* de Edge Functions en Supabase.
 - La contraseña de la base de datos la genera Supabase al crear el proyecto; no hace falta para operar SIGAE (todo se hace por el tablero, las migraciones y las funciones). Si algún día se necesita, se restablece desde Settings → Database.
@@ -58,4 +58,7 @@ Se aplican con la herramienta del repo `supabase/herramientas/supabase_api.py` (
 La liga pública con `?demo=1` sigue usando la base falsa (datos ficticios en el navegador de quien la abre). Sirve para enseñar el sistema sin tocar datos reales. Sin `?demo=1`, la página usa el proyecto real de Supabase.
 
 ## 6. Bitácora de la puesta en marcha
-- **2026-10-25** — Repositorio `ShadowM-123/sigae` creado desde la cuenta de SHADOW. Invitación de administrador en la organización de Supabase enviada a menyacosta.28@gmail.com. (El resto de esta sección se actualiza conforme avance.)
+- **2026-10-25** — Repositorio `ShadowM-123/sigae` creado desde la cuenta de SHADOW; menyacosta28-glitch agregado como colaborador; código subido; GitHub Pages activado desde `main` (raíz).
+- **2026-10-25** — menyacosta.28@gmail.com aceptó la invitación a la organización de Supabase. Se bajó su rol a **Developer**: el plan Free cuenta los proyectos gratuitos de cada administrador en todas sus organizaciones, y con rol Administrador bloqueaba la creación del proyecto.
+- **2026-10-25** — Proyecto `sigae` creado desde la cuenta de SHADOW. Migraciones 0001–0004 aplicadas desde el SQL Editor del tablero (cargadas desde el repo público) y registradas en `supabase_migrations.schema_migrations` con versiones `2026102500000N`. Resultado: 26 tablas, 62 catálogos, 68 políticas RLS.
+- **2026-10-25** — URL y llave publishable puestas en `web/assets/js/supabase.js`.

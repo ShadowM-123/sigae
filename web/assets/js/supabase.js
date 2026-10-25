@@ -3,8 +3,8 @@
    Las llaves de abajo son PÚBLICAS por diseño (anon key): la seguridad la ponen las políticas RLS. */
 
 export const CONFIG = {
-  url: 'https://TU-PROYECTO.supabase.co',   // ← se llena en el paso I con el proyecto de SHADOW
-  anon: 'TU-ANON-KEY',
+  url: 'https://osqeypstmwzguvwokomc.supabase.co',           // proyecto «sigae» en la organización de SHADOW (ver docs/04)
+  anon: 'sb_publishable_4iszzNRZfEk0hGAbGb570g_nJAXjmBq',  // llave PÚBLICA (publishable); la seguridad la ponen las políticas RLS
 };
 
 const params = new URLSearchParams(location.search);
@@ -13,7 +13,7 @@ export const modoDemo = sessionStorage.getItem('sigae_modo') === 'demo' || CONFI
 
 export const db = modoDemo
   ? (await import('./demo/supabase-falso.js')).crearClienteFalso()
-  : (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/+esm')).createClient(CONFIG.url, CONFIG.anon);
+  : (await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')).createClient(CONFIG.url, CONFIG.anon);
 
 /** Enlace interno que conserva el modo demo. */
 export const ruta = (p) => p + (modoDemo && !p.includes('demo=') ? (p.includes('?') ? '&' : '?') + 'demo=1' : '');

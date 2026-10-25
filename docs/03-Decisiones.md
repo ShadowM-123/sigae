@@ -2,6 +2,13 @@
 
 Las decisiones de arranque están en `01-Arquitectura.md` §11. Aquí van las posteriores, la más reciente arriba. Formato: fecha · decisión · por qué · quién.
 
+## 2026-10-25 — Entrega (J): usuarios reales, correos y guía para Dirección
+- **Contraseñas**: Supabase manda invitaciones y recuperaciones a la Site URL con `#type=invite|recovery`; `index.html` las detecta y reenvía a `establecer-clave.html`, donde la persona crea su contraseña y entra a su perfil. En la entrada hay «¿Olvidaste tu contraseña?». — Claude.
+- **Edge Function `enviar-correo`** desplegada (verificación de JWT legada apagada: la función valida la sesión y exige rol de Dirección, o `CRON_KEY` para un cron futuro). Envía por Resend los `correos_enviados` pendientes y, con `accion: invitar`, crea usuarios con la llave de servicio (invitación por correo). El frontend la llama al encolar, al invitar especialistas y al seleccionar postulantes; en la demo se simula. Sustituye a las funciones `crear-usuario` y `seleccionar-monitora` del documento de arquitectura. — Claude.
+- **Resend sigue pendiente de la cuenta de SHADOW**: hasta que exista `RESEND_API_KEY`, los correos quedan pendientes y se copian desde Reclutamiento → Correos por enviar. No se usó la cuenta de Resend de Biné a propósito: la infraestructura debe ser de SHADOW. — Claude con Manuel.
+- **Primer usuario de Dirección**: invitada por correo el 25-oct-2026 (shadow.monitoras@gmail.com, uid 0e2ee9c6…) con su fila en perfiles rol direccion; al abrir la invitación crea su contraseña y entra. La fila de `perfiles` con rol `direccion` se inserta con SQL al existir el usuario en Auth. — Claude.
+- **Entrega**: `docs/05-Entrega-a-Direccion.md` (lenguaje llano: qué tiene, dónde vive, cómo entra, primera semana, qué falta) y `docs/06-Prompts-para-tu-Claude.md` (prompts listos). `CLAUDE.md` tiene una sección para el Claude de Dirección. — Claude.
+
 ## 2026-10-25 — Pasos G y H construidos: especialistas y reclutamiento
 **G · Especialistas y personal escolar (`especialista.html`, `direccion-g.js`, migración `0006`).**
 - Acceso de **solo consulta**: datos mínimos del caso, monitora asignada y, únicamente si Dirección marca `puede_ver_bitacoras`, las bitácoras enviadas (nunca borradores, nunca la sección confidencial, sin botón de descarga). La regla `puede_ver_bitacora` incluye ahora al especialista autorizado. — Claude.

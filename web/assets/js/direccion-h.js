@@ -1,0 +1,165 @@
+/* SIGAE — Dirección, paso H: Reclutamiento y selección de monitoras.
+   Panel por etapas, expediente de postulación, perfiles de acompañamiento, compatibilidad, decisiones con historial,
+   correos (pendientes de Resend: texto listo para copiar), registro de entrevista y conversión en monitora. */
+import * as api from './api.js';
+import { esc, fecha, hora, hoyIso, sumarDias, toast, modal, cerrarModal, val, iniciales, nombreCorto, relativo, horaCorta } from './ui.js';
+import { CRITERIOS, PESOS_BASE, calcular, personaDesdePostulacion, personaDesdeMonitora, colorPct, htmlDesglose } from './compatibilidad.js';
+import { encolar, redactar, PLANTILLAS } from './correos.js';
+import { modoDemo } from './supabase.js';
+
+const hoy = hoyIso();
+export const ETAPAS = { recibida: 'Recibida', invitada_2a_etapa: 'Invitada a 2ª etapa', '2a_etapa_completa': '2ª etapa completa', invitada_entrevista: 'Invitada a entrevista', entrevista_agendada: 'Entrevista agendada', entrevistada: 'Entrevistada', seleccionada: 'Seleccionada', cerrada: 'No continuó' };
+const ORDEN_ETAPAS = Object.keys(ETAPAS);
+export const tagEtapa = e => `<span class="tag ${{ recibida: 'warn', invitada_2a_etapa: '', '2a_etapa_completa': 'warn', invitada_entrevista: '', entrevista_agendada: '', entrevistada: 'warn', seleccionada: 'ok', cerrada: 'gray' }[e] || ''}">${ETAPAS[e] || e}</span>`;
+const DIAS = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom' };
+
+async function cargar() {
+  const [posts, perfilesA, pan, correos, config] = await Promise.all([api.postulaciones(), api.perfilesAcompanamiento(), api.panoramaEstudiantes(), api.correos({ estado: 'pendiente' }), api.configuracion()]);
+  return { posts, perfilesA, pan, correos, config };
+}
+const urlSitio = cfg => (cfg.url_sitio || new URL('.', location.href).href).replace(/\/?$/, '/');
+const enlace2a = (cfg, p) => `${urlSitio(cfg)}segunda-etapa.html?t=${p.token_2a_etapa}${modoDemo ? '&demo=1' : ''}`;
+
+/* ======================= Pestaña ======================= */
+export async function reclutamiento(vista, ctx, params = {}) {
+  const d = await cargar(); const sec = params.sec || 'panel';
+  const recargar = (s = sec) => reclutamiento(vista, ctx, { sec: s });
+  const n = e => d.posts.filter(p => p.etapa === e).length;
+  const abiertas = d.posts.filter(p => !['seleccionada', 'cerrada'].includes(p.etapa));
+  const kpi = (l, v, s = '') => `<div class="card kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="d">${s}</div></div>`;
+  vista.innerHTML = `<div class="row"><h1 class="titulo">Reclutamiento</h1><div class="sp"></div><button class="btn" id="rcEnlace">Liga pública</button><button class="btn" id="rcAjustes">Ajustes</button><button class="btn p" id="rcPerfil">＋ Perfil de acompañamiento</button></div>
+  <div class="subtitulo">Todo el proceso de selección en un solo lugar: postulaciones por etapa, currículums, compatibilidad con el perfil que necesitas cubrir y la decisión en cada paso. El porcentaje apoya tu criterio; nunca decide por ti.</div>
+  <div class="subtabs">${[['panel', 'Panel'], ['postulaciones', `Postulaciones (${d.posts.length})`], ['perfiles', `Perfiles de acompañamiento (${d.perfilesA.filter(x => x.activo).length})`], ['correos', `Correos por enviar (${d.correos.length})`]].map(([k, t]) => `<button class="${k === sec ? 'on' : ''}" data-sec="${k}">${t}</button>`).join('')}</div>
+  <div id="rcZona"></div>`;
+  vista.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => recargar(b.dataset.sec));
+  document.getElementById('rcPerfil').onclick = () => formPerfil(null, d, ctx, () => recargar('perfiles'));
+  document.getElementById('rcEnlace').onclick = () => { const u = `${urlSitio(d.config)}postulacion.html`; modal('Liga pública de postulación', `<p>Compártela en redes, bolsas de trabajo o con las escuelas. No pide crear cuenta.</p><input value="${esc(u)}" readonly style="width:100%;padding:8px;border:1px solid var(--line-2);border-radius:8px" onclick="this.select()"><div class="small muted" style="margin-top:8px">Las postulaciones aparecen aquí automáticamente y la persona recibe un correo de confirmación.</div>`); };
+  document.getElementById('rcAjustes').onclick = () => ajustes(d, () => recargar());
+  const zona = document.getElementById('rcZona');
+
+  if (sec === 'panel') {
+    zona.innerHTML = `<div class="grid g4" style="margin-bottom:12px">${kpi('Postulaciones recibidas', d.posts.length, 'en total')}${kpi('Pendientes de revisar', n('recibida'), 'currículums nuevos')}${kpi('En segunda etapa', n('invitada_2a_etapa') + n('2a_etapa_completa'), `${n('2a_etapa_completa')} formularios por revisar`)}${kpi('En entrevista', n('invitada_entrevista') + n('entrevista_agendada') + n('entrevistada'), `${n('entrevista_agendada')} agendadas · ${n('entrevistada')} por decidir`)}</div>
+      <div class="grid g4" style="margin-bottom:14px">${kpi('Seleccionadas', n('seleccionada'), 'ya son monitoras')}${kpi('No continuaron', n('cerrada'), 'con historial conservado')}${kpi('Perfiles por cubrir', d.perfilesA.filter(x => x.activo).length, 'perfiles de acompañamiento activos')}${kpi('Correos por enviar', d.correos.length, 'pendientes de Resend')}</div>
+      <div class="grid g2">${ORDEN_ETAPAS.filter(e => !['seleccionada', 'cerrada'].includes(e)).map(e => { const ps = d.posts.filter(p => p.etapa === e); return `<div class="card"><div class="hd"><h3>${ETAPAS[e]}</h3><div class="sp"></div><span class="tag">${ps.length}</span></div><div class="bd sin"><ul class="lista">${ps.map(p => filaPost(p, d)).join('') || '<li class="vacio">Nadie en esta etapa.</li>'}</ul></div></div>`; }).join('')}</div>`;
+  } else if (sec === 'postulaciones') {
+    const filtro = ctx._rcFiltro || { etapa: '', q: '' };
+    const lista = d.posts.filter(p => (!filtro.etapa || p.etapa === filtro.etapa) && (!filtro.q || p.nombre_normalizado.includes(filtro.q) || p.folio.toLowerCase().includes(filtro.q) || (p.correo || '').includes(filtro.q)));
+    zona.innerHTML = `<div class="row" style="margin-bottom:10px"><input id="rcQ" placeholder="Buscar por nombre, folio o correo" value="${esc(filtro.q)}" style="padding:8px 10px;border:1px solid var(--line-2);border-radius:8px;min-width:260px"><select id="rcEtapa" class="sel"><option value="">Todas las etapas</option>${ORDEN_ETAPAS.map(e => `<option value="${e}" ${filtro.etapa === e ? 'selected' : ''}>${ETAPAS[e]}</option>`).join('')}</select><span class="small muted">${lista.length} resultado${lista.length === 1 ? '' : 's'}</span></div>
+      <div class="card"><div class="bd sin"><div class="tabla-wrap"><table><thead><tr><th>Folio</th><th>Nombre</th><th>Contacto</th><th>Etapa</th><th>Perfil</th><th>Compat.</th><th>Recibida</th><th></th></tr></thead><tbody>${lista.map(p => { const pa = d.perfilesA.find(x => x.id === p.perfil_acompanamiento_id); return `<tr class="click" data-post="${p.id}"><td class="mono small">${esc(p.folio)}</td><td><b>${esc(p.nombre_original)}</b></td><td class="small">${esc(p.correo)}<br>${esc(p.telefono || '')}</td><td>${tagEtapa(p.etapa)}</td><td class="small">${pa ? esc(pa.nombre) : '<span class="muted">—</span>'}</td><td>${p.compatibilidad ? `<span class="tag ${colorPct(p.compatibilidad.porcentaje)}">${p.compatibilidad.porcentaje} %</span>` : '<span class="muted small">—</span>'}</td><td class="small muted">${fecha(p.creado_en)}</td><td><button class="btn s">Abrir</button></td></tr>`; }).join('') || '<tr><td colspan="8" class="vacio">Sin postulaciones con ese filtro.</td></tr>'}</tbody></table></div></div></div>`;
+    document.getElementById('rcQ').oninput = e => { ctx._rcFiltro = { ...filtro, q: e.target.value.toLowerCase().trim() }; clearTimeout(ctx._rcT); ctx._rcT = setTimeout(() => recargar('postulaciones'), 350); };
+    document.getElementById('rcEtapa').onchange = e => { ctx._rcFiltro = { ...filtro, etapa: e.target.value }; recargar('postulaciones'); };
+  } else if (sec === 'perfiles') {
+    zona.innerHTML = `<div class="grid g2">${d.perfilesA.map(x => { const e = d.pan.find(y => y.id === x.estudiante_id); return `<div class="card ${x.activo ? '' : 'muted'}"><div class="hd"><h3>${esc(x.nombre)}</h3>${x.activo ? '<span class="tag ok">Activo</span>' : '<span class="tag gray">Cubierto / inactivo</span>'}<div class="sp"></div><button class="btn s" data-pa="${x.id}">Editar</button></div><div class="bd small"><p><b>${esc(e?.nombre || '')}</b> · ${esc(e?.escuela || '')} · zona ${esc(x.zona || '—')}</p><p>Formación requerida: ${(x.formacion_requerida || []).map(k => `<span class="tag">${esc(ctx.cat._etiqueta('formacion_academica', k))}</span>`).join(' ') || '<span class="muted">cualquiera</span>'}${(x.formacion_deseable || []).length ? ` · deseable: ${x.formacion_deseable.map(k => esc(ctx.cat._etiqueta('formacion_academica', k))).join(', ')}` : ''}</p><p>Necesidades: ${(x.necesidades || []).map(k => `<span class="tag gray">${esc(k)}</span>`).join(' ') || '—'}</p><p>Horario: ${horaCorta(x.hora_inicio)}–${horaCorta(x.hora_fin)} · ${(x.dias || []).map(k => DIAS[k]).join(' ')}${x.edad_min || x.edad_max ? ` · edad ${x.edad_min || '—'}–${x.edad_max || '—'}` : ''}</p><p class="muted">Pesos: ${Object.entries({ ...PESOS_BASE, ...(x.pesos || {}) }).map(([k, v]) => `${CRITERIOS[k].split(' ')[0].toLowerCase()} ${v}`).join(' · ')}</p></div></div>`; }).join('') || '<div class="card"><div class="vacio">Crea el primer perfil de acompañamiento: describe qué buscas para un estudiante y el sistema comparará a las postulantes contra eso.</div></div>'}</div>`;
+    zona.querySelectorAll('[data-pa]').forEach(b => b.onclick = () => formPerfil(d.perfilesA.find(x => x.id === b.dataset.pa), d, ctx, () => recargar('perfiles')));
+  } else if (sec === 'correos') {
+    zona.innerHTML = `<div class="alerta" style="margin-bottom:12px"><span class="tx small">Mientras Resend no esté conectado, los correos quedan aquí listos para copiar y mandar desde tu correo. Cuando se active el envío automático, esta bandeja se vaciará sola.</span></div>
+      <div class="card"><div class="bd sin"><ul class="lista">${d.correos.map(c => `<li><div class="tx"><b>${esc(c.asunto)}</b><div class="m">Para ${esc(c.destinatario)} · ${PLANTILLAS[c.plantilla]?.nombre || c.plantilla} · ${fecha(c.fecha)} ${hora(c.fecha)}</div></div><button class="btn s" data-ver-correo="${c.id}">Ver y copiar</button><button class="btn s" data-copiado="${c.id}">Ya lo mandé</button></li>`).join('') || '<li class="vacio">No hay correos pendientes.</li>'}</ul></div></div>`;
+    zona.querySelectorAll('[data-ver-correo]').forEach(b => b.onclick = () => { const c = d.correos.find(x => x.id === b.dataset.verCorreo); modal(esc(c.asunto), `<div class="small muted">Para: ${esc(c.destinatario)}</div><textarea readonly style="width:100%;min-height:220px;margin-top:8px;font:inherit;padding:10px;border:1px solid var(--line-2);border-radius:8px" onclick="this.select()">${esc(c.cuerpo || '')}</textarea>`, `<button class="btn" data-cerrar>Cerrar</button><button class="btn p" id="cpCorreo">Copiar texto</button>`); document.getElementById('cpCorreo').onclick = async () => { try { await navigator.clipboard.writeText(`Asunto: ${c.asunto}\n\n${c.cuerpo}`); toast('Copiado'); } catch (e) { toast('Selecciona el texto y cópialo.'); } }; });
+    zona.querySelectorAll('[data-copiado]').forEach(b => b.onclick = async () => { await api.guardarCorreo({ id: b.dataset.copiado, estado: 'copiado' }); toast('Marcado como enviado'); recargar('correos'); });
+  }
+  zona.querySelectorAll('[data-post]').forEach(el => el.onclick = () => verPostulacion(el.dataset.post, ctx, () => recargar()));
+}
+const filaPost = (p, d) => `<li class="click" data-post="${p.id}"><span class="ava">${iniciales(p.nombre_original)}</span><div class="tx"><b>${esc(p.nombre_original)}</b><div class="m">${esc(p.folio)} · ${relativo(p.creado_en.slice(0, 10))}${p.compatibilidad ? ` · <span class="tag ${colorPct(p.compatibilidad.porcentaje)}" style="font-size:10.5px">${p.compatibilidad.porcentaje} %</span>` : ''}${p.entrevista_fecha ? ` · entrevista ${fecha(p.entrevista_fecha)} ${hora(p.entrevista_fecha)}` : ''}</div></div><span class="btn s">Abrir</span></li>`;
+
+/* ======================= Expediente de postulación ======================= */
+export async function verPostulacion(id, ctx, alCambiar) {
+  const [p, det, refs, hist, d] = await Promise.all([api.postulacion(id), api.postulacionDetalle(id), api.referencias(id), api.postulacionHistorial(id), cargar()]);
+  const pa = d.perfilesA.find(x => x.id === p.perfil_acompanamiento_id) || null;
+  const cv = p.cv_path ? await api.urlCv(p.cv_path) : '';
+  const persona = personaDesdePostulacion(p, det);
+  const acciones = { recibida: `<button class="btn p" data-ac="avanzar2">Avanzar a 2ª etapa</button><button class="btn peligro" data-ac="cerrar">No continuar</button>`, invitada_2a_etapa: `<button class="btn" data-ac="reenviar2">Reenviar enlace</button><button class="btn" data-ac="completar2">Capturar 2ª etapa por ella</button><button class="btn peligro" data-ac="cerrar">No continuar</button>`, '2a_etapa_completa': `<button class="btn p" data-ac="entrevista">Avanzar a entrevista</button><button class="btn peligro" data-ac="cerrar">No continuar</button>`, invitada_entrevista: `<button class="btn p" data-ac="agendar">Registrar entrevista</button><button class="btn peligro" data-ac="cerrar">No continuar</button>`, entrevista_agendada: `<button class="btn" data-ac="agendar">Cambiar fecha</button><button class="btn p" data-ac="entrevistada">Marcar entrevistada</button><button class="btn peligro" data-ac="cerrar">No continuar</button>`, entrevistada: `<button class="btn p" data-ac="seleccionar">Seleccionar como monitora</button><button class="btn peligro" data-ac="cerrar">No continuar</button>`, seleccionada: '', cerrada: `<button class="btn" data-ac="reabrir">Reabrir</button>` }[p.etapa] || '';
+  modal(`${esc(p.nombre_original)} <span class="small muted" style="font-weight:500">· ${esc(p.folio)}</span>`, `
+    <div class="row" style="margin-bottom:10px">${tagEtapa(p.etapa)}<span class="small muted">Recibida ${fecha(p.creado_en)} · ${esc(p.correo)} · ${esc(p.telefono || '')}</span>${cv ? `<a class="btn s" href="${esc(cv)}" target="_blank" rel="noopener">Ver currículum</a>` : '<span class="tag gray">Sin CV</span>'}</div>
+    ${p.motivo_cierre ? `<div class="alerta" style="margin-bottom:10px"><span class="tx small"><b>Cierre:</b> ${esc(p.motivo_cierre)}</span></div>` : ''}
+    <div class="grid g2">
+      <div class="card"><div class="hd"><h3>Compatibilidad</h3><div class="sp"></div><select id="po_perfil" class="sel s"><option value="">Elige un perfil…</option>${d.perfilesA.filter(x => x.activo || x.id === pa?.id).map(x => `<option value="${x.id}" ${pa?.id === x.id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select></div><div class="bd" id="po_compat">${p.compatibilidad && pa ? `<div class="row" style="margin-bottom:8px"><b style="font-size:28px">${p.compatibilidad.porcentaje} %</b><span class="small muted">con ${esc(pa.nombre)} · calculado ${fecha(p.compatibilidad.calculado_en)}</span></div>${htmlDesglose(p.compatibilidad)}` : '<div class="small muted">Elige el perfil de acompañamiento que quieres cubrir para ver el porcentaje y su desglose. Es un apoyo: revisa siempre el currículum y las respuestas.</div>'}</div></div>
+      <div class="card"><div class="hd"><h3>Segunda etapa</h3><div class="sp"></div>${det?.completado_en ? `<span class="tag ok">Recibida ${fecha(det.completado_en)}</span>` : '<span class="tag gray">Pendiente</span>'}</div><div class="bd small">${det?.completado_en ? `<dl class="dl"><dt>Edad</dt><dd>${det.edad || '—'} · nació el ${fecha(det.fecha_nacimiento)}</dd><dt>Dirección</dt><dd>${esc([det.calle_numero, det.colonia, det.cp, det.ciudad].filter(Boolean).join(', '))}</dd><dt>Formación</dt><dd>${esc(ctx.cat._etiqueta('formacion_academica', det.formacion))}${det.formacion_otra ? ' (' + esc(det.formacion_otra) + ')' : ''}${det.tiene_titulo ? ' · con título' : ' · sin título'}${det.tiene_cedula ? ' · cédula ' + esc(det.cedula || '') : ''}</dd><dt>Experiencia</dt><dd>${esc(det.experiencia_texto || '—')}</dd><dt>Intereses</dt><dd>${esc(det.intereses || '—')}</dd><dt>Trabaja</dt><dd>${det.trabaja_actualmente ? 'Sí · ' + esc(det.horario_actual || '') : 'No'}</dd><dt>Disponibilidad</dt><dd>${(det.disponibilidad?.dias || []).map(k => DIAS[k]).join(' ')} · ${det.disponibilidad?.hora_inicio || ''}–${det.disponibilidad?.hora_fin || ''}</dd><dt>Expectativa</dt><dd>${esc(det.expectativa_economica || '—')}</dd><dt>¿Qué es una monitora?</dt><dd>${esc(det.sabe_que_es_monitora || '—')}</dd><dt>¿Por qué SHADOW?</dt><dd>${esc(det.por_que_candidata || '—')}</dd></dl><b>Referencias</b><ul class="lista">${refs.map(r => `<li style="padding:6px 0"><div class="tx"><b>${esc(r.nombre || '')}</b><div class="m">${esc(r.cargo || '')} · ${esc(r.centro_trabajo || '')} · ${esc(r.contacto || '')}</div></div></li>`).join('') || '<li class="muted">Sin referencias.</li>'}</ul>` : `<p class="muted">Aún no completa el formulario.${p.etapa === 'invitada_2a_etapa' ? ` Su enlace: <input value="${esc(enlace2a(d.config, p))}" readonly style="width:100%;padding:6px;border:1px solid var(--line-2);border-radius:8px;margin-top:6px" onclick="this.select()">` : ''}</p>`}${p.como_se_entero ? `<p class="muted" style="margin-top:8px">Se enteró por: ${esc(ctx.cat._etiqueta('como_se_entero', p.como_se_entero))}</p>` : ''}</div></div>
+    </div>
+    ${p.entrevista_fecha || p.entrevista_notas ? `<div class="card" style="margin-top:12px"><div class="hd"><h3>Entrevista</h3></div><div class="bd small">${p.entrevista_fecha ? `<p><b>${fecha(p.entrevista_fecha)} a las ${hora(p.entrevista_fecha)}</b></p>` : ''}${p.entrevista_notas ? `<p>${esc(p.entrevista_notas)}</p>` : ''}</div></div>` : ''}
+    <div class="card" style="margin-top:12px"><div class="hd"><h3>Notas de Dirección</h3></div><div class="bd"><textarea id="po_notas" placeholder="Impresiones, pendientes de verificar, acuerdos…">${esc(p.notas_direccion || '')}</textarea><button class="btn s" id="po_notas_ok" style="margin-top:6px">Guardar notas</button></div></div>
+    <h4 style="margin:14px 0 6px">Historial</h4><ul class="lista">${hist.map(h => `<li style="padding:6px 0"><div class="tx"><b>${ETAPAS[h.evento] || esc(h.evento)}</b><div class="m">${fecha(h.fecha)} ${hora(h.fecha)}${h.detalle ? ' · ' + esc(h.detalle) : ''}</div></div></li>`).join('')}</ul>`,
+    `<button class="btn" data-cerrar>Cerrar</button>${acciones}`);
+  const m = document.getElementById('modal'); const reabrir = () => { alCambiar?.(); verPostulacion(id, ctx, alCambiar); };
+  document.getElementById('po_perfil').onchange = async e => { const x = d.perfilesA.find(y => y.id === e.target.value); if (!x) return; const c = calcular(persona, x, { etiquetaFormacion: k => ctx.cat._etiqueta('formacion_academica', k) }); await api.guardarPostulacion({ id, perfil_acompanamiento_id: x.id, compatibilidad: { ...c, perfil_id: x.id } }); document.getElementById('po_compat').innerHTML = `<div class="row" style="margin-bottom:8px"><b style="font-size:28px">${c.porcentaje} %</b><span class="small muted">con ${esc(x.nombre)}</span></div>${htmlDesglose(c)}`; alCambiar?.(); };
+  document.getElementById('po_notas_ok').onclick = async () => { await api.guardarPostulacion({ id, notas_direccion: val('po_notas') || null }); toast('Notas guardadas'); };
+  m.querySelectorAll('[data-ac]').forEach(b => b.onclick = () => accion(b.dataset.ac, p, det, d, ctx, reabrir));
+}
+
+async function registrar(p, etapa, detalle, ctx, extra = {}) {
+  await api.guardarPostulacion({ id: p.id, etapa, ...extra });
+  await api.registrarHistorialPostulacion({ postulacion_id: p.id, evento: etapa, detalle, por: ctx.perfil.id });
+}
+async function accion(ac, p, det, d, ctx, reabrir) {
+  const datos = { nombre: p.nombre_original, folio: p.folio };
+  if (ac === 'avanzar2' || ac === 'reenviar2') {
+    const enlace = enlace2a(d.config, p);
+    await encolar('invitacion_2a_etapa', p.correo, { ...datos, enlace }, `postulacion:${p.id}`);
+    if (ac === 'avanzar2') await registrar(p, 'invitada_2a_etapa', 'Invitada a la segunda etapa; correo con enlace en la bandeja de salida', ctx);
+    else await api.registrarHistorialPostulacion({ postulacion_id: p.id, evento: 'invitada_2a_etapa', detalle: 'Enlace reenviado', por: ctx.perfil.id });
+    modal('Invitación lista', `<p>El correo quedó en <b>Correos por enviar</b> (hasta que Resend esté conectado, se manda a mano). Este es el enlace personal de ${esc(p.nombre_original.split(' ')[0])}:</p><input value="${esc(enlace)}" readonly style="width:100%;padding:8px;border:1px solid var(--line-2);border-radius:8px" onclick="this.select()">`, '<button class="btn p" data-cerrar>Entendido</button>');
+    document.querySelector('#modal [data-cerrar]').addEventListener('click', reabrir, { once: true }); return;
+  }
+  if (ac === 'completar2') { window.open(enlace2a(d.config, p), '_blank'); return; }
+  if (ac === 'cerrar') {
+    modal('No continuar con la postulación', `<div class="form"><div class="f"><label>Motivo (interno, no se envía)</label><textarea id="ci_m" placeholder="Ej. Sin experiencia con TEA; disponibilidad incompatible"></textarea></div><label class="chk"><input type="checkbox" id="ci_correo" checked> Dejar listo el correo de agradecimiento (cordial, deja abierta la puerta)</label></div>`, `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="ci_ok">Cerrar postulación</button>`);
+    document.getElementById('ci_ok').onclick = async () => { await registrar(p, 'cerrada', val('ci_m') || 'Proceso cerrado por Dirección', ctx, { etapa_al_cerrar: p.etapa, motivo_cierre: val('ci_m') || null }); if (val('ci_correo')) await encolar('agradecimiento_cierre', p.correo, datos, `postulacion:${p.id}`); cerrarModal(); toast('Postulación cerrada; el historial se conserva'); reabrir(); }; return;
+  }
+  if (ac === 'reabrir') { await registrar(p, p.etapa_al_cerrar || 'recibida', 'Postulación reabierta', ctx, { motivo_cierre: null }); toast('Reabierta'); reabrir(); return; }
+  if (ac === 'entrevista') {
+    const agenda = d.config.enlace_agenda_entrevistas || '';
+    await encolar('invitacion_entrevista', p.correo, { ...datos, agenda }, `postulacion:${p.id}`);
+    await registrar(p, 'invitada_entrevista', agenda ? 'Invitada a entrevista con la liga de agenda' : 'Invitada a entrevista (sin liga de agenda: coordinar por correo)', ctx);
+    toast(agenda ? 'Invitación lista en Correos por enviar' : 'Invitación lista. Tip: en Ajustes puedes poner tu liga de agenda para que elija horario sola.'); reabrir(); return;
+  }
+  if (ac === 'agendar') {
+    modal('Registrar entrevista', `<div class="form g2"><div class="f"><label>Fecha</label><input type="date" id="en_f" value="${p.entrevista_fecha ? p.entrevista_fecha.slice(0, 10) : sumarDias(hoy, 3)}"></div><div class="f"><label>Hora</label><input type="time" id="en_h" value="${p.entrevista_fecha ? hora(p.entrevista_fecha) : '10:00'}"></div><div class="f full"><label>Lugar</label><input id="en_l" value="Oficina SHADOW"></div></div><div class="small muted" style="margin-top:8px">Se agrega a tu calendario como entrevista.</div>`, `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="en_ok">Guardar</button>`);
+    document.getElementById('en_ok').onclick = async () => { const f = val('en_f'), h = val('en_h'); if (!f) { toast('Falta la fecha.'); return; } await registrar(p, 'entrevista_agendada', `Entrevista el ${fecha(f)} a las ${h}`, ctx, { entrevista_fecha: `${f}T${h || '10:00'}:00` }); await api.guardarEvento({ tipo: 'entrevista', titulo: `Entrevista · ${p.nombre_original}`, fecha: f, hora: h || null, lugar: val('en_l') || null, notas: `Postulación ${p.folio}`, creado_por: ctx.perfil.id }); cerrarModal(); toast('Entrevista registrada en el calendario'); reabrir(); }; return;
+  }
+  if (ac === 'entrevistada') {
+    modal('Después de la entrevista', `<div class="f"><label>Notas de la entrevista</label><textarea id="ev_n" placeholder="Impresión general, fortalezas, dudas, siguientes pasos (verificar referencias, capacitación…)">${esc(p.entrevista_notas || '')}</textarea></div>`, `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="ev_ok">Guardar</button>`);
+    document.getElementById('ev_ok').onclick = async () => { await registrar(p, 'entrevistada', 'Entrevista realizada', ctx, { entrevista_notas: val('ev_n') || null }); cerrarModal(); toast('Guardado. Ya puedes seleccionarla o cerrar el proceso.'); reabrir(); }; return;
+  }
+  if (ac === 'seleccionar') {
+    modal('Seleccionar como monitora', `<div class="alerta" style="margin-bottom:10px"><span class="tx small">Se crea su expediente de monitora copiando lo que ya capturó (datos, formación, experiencia, disponibilidad) y queda ligado a esta postulación. Después la asignas a un estudiante desde Estudiantes.</span></div><p class="small">${modoDemo ? 'En la demo el usuario se crea al instante.' : `Antes, crea o invita a <b>${esc(p.correo)}</b> en Supabase → Authentication → Users (la invitación automática por correo llega con Resend). Luego pulsa Confirmar.`}</p>`, `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="se_ok">Confirmar selección</button>`);
+    document.getElementById('se_ok').onclick = async () => { try { const uid = await api.seleccionarPostulante(p.id); await encolar('seleccionada', p.correo, { ...datos, enlace: urlSitio(d.config) }, `postulacion:${p.id}`); cerrarModal(); toast('¡Ya es monitora! Asígnala desde Estudiantes.'); reabrir(); } catch (e) { toast(e.message || 'No se pudo seleccionar'); } }; return;
+  }
+}
+
+/* ======================= Perfiles de acompañamiento ======================= */
+function formPerfil(x, d, ctx, alGuardar) {
+  const v = x || {}; const pesos = { ...PESOS_BASE, ...(v.pesos || {}) }; const forms = ctx.cat.formacion_academica || [];
+  const chips = (id, lista, sel) => `<div class="row" style="gap:6px" id="${id}">${lista.map(f => `<label class="chk small" style="border:1px solid var(--line-2);border-radius:8px;padding:5px 8px"><input type="checkbox" value="${esc(f.clave)}" ${(sel || []).includes(f.clave) ? 'checked' : ''}> ${esc(f.etiqueta)}</label>`).join('')}</div>`;
+  const est = d.pan.find(e => e.id === v.estudiante_id);
+  modal(x ? 'Editar perfil de acompañamiento' : 'Nuevo perfil de acompañamiento', `<div class="form">
+    <div class="form g2"><div class="f"><label>Estudiante *</label><select id="pa_est">${d.pan.map(e => `<option value="${e.id}" ${v.estudiante_id === e.id ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('')}</select></div><div class="f"><label>Nombre del perfil *</label><input id="pa_n" value="${esc(v.nombre || '')}" placeholder="Ej. Monitora para Santiago · ciclo 2026-2027"></div></div>
+    <div class="f"><label>Formación requerida (indispensable)</label>${chips('pa_fr', forms, v.formacion_requerida)}</div>
+    <div class="f"><label>Formación deseable (suma, no excluye)</label>${chips('pa_fd', forms, v.formacion_deseable)}</div>
+    <div class="form g2"><div class="f"><label>Experiencia que buscas (frases cortas separadas por coma)</label><textarea id="pa_exp" placeholder="acompañamiento escolar, primaria, trabajo con familias">${esc(v.experiencia || '')}</textarea></div><div class="f"><label>Experiencia con estas necesidades (separadas por coma)</label><textarea id="pa_nec" placeholder="TEA, regulación sensorial, transiciones">${esc((v.necesidades || []).join(', '))}</textarea></div></div>
+    <div class="form g2"><div class="f"><label>Habilidades específicas (coma)</label><input id="pa_hab" value="${esc((v.habilidades || []).join(', '))}" placeholder="apoyos visuales, plan de calma"></div><div class="f"><label>Conocimientos adicionales (coma)</label><input id="pa_con" value="${esc((v.conocimientos || []).join(', '))}" placeholder="PECS, TEACCH, lectoescritura"></div></div>
+    <div class="f"><label>Características profesionales importantes</label><textarea id="pa_car">${esc(v.caracteristicas || '')}</textarea></div>
+    <div class="form g3"><div class="f"><label>Edad mínima</label><input type="number" id="pa_emin" value="${v.edad_min || ''}"></div><div class="f"><label>Edad máxima</label><input type="number" id="pa_emax" value="${v.edad_max || ''}"></div><div class="f"><label>Zona de la ciudad</label><input id="pa_zona" value="${esc(v.zona || est?.zona || '')}"></div></div>
+    <div class="f"><label>Dirección de la escuela</label><input id="pa_dir" value="${esc(v.direccion_escuela || est?.direccion_escuela || '')}"></div>
+    <div class="form g3"><div class="f"><label>Hora de inicio</label><input type="time" id="pa_hi" value="${horaCorta(v.hora_inicio) || horaCorta(est?.hora_entrada) || '08:00'}"></div><div class="f"><label>Hora de fin</label><input type="time" id="pa_hf" value="${horaCorta(v.hora_fin) || horaCorta(est?.hora_salida) || '14:00'}"></div><div class="f"><label>Días</label><div class="row" style="gap:4px">${Object.entries(DIAS).slice(0, 6).map(([k, t]) => `<label class="chk small"><input type="checkbox" data-pdia="${k}" ${(v.dias || [1, 2, 3, 4, 5]).includes(Number(k)) ? 'checked' : ''}> ${t}</label>`).join('')}</div></div></div>
+    <div class="f"><label>Otros requisitos</label><textarea id="pa_otros">${esc(v.otros_requisitos || '')}</textarea></div>
+    <div class="f"><label>Importancia de cada criterio (pesos; se normalizan solos)</label><div class="form g2">${Object.entries(CRITERIOS).map(([k, t]) => `<label class="small">${t}<input type="number" min="0" max="100" data-peso="${k}" value="${pesos[k]}" style="width:100%;padding:6px 8px;border:1px solid var(--line-2);border-radius:8px"></label>`).join('')}</div><div class="small muted">Pon 0 a lo que no importe en este caso: así no penaliza.</div></div>
+    <label class="chk"><input type="checkbox" id="pa_act" ${v.activo !== false ? 'checked' : ''}> Perfil activo (vacante por cubrir)</label></div>`, `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="pa_ok">Guardar</button>`);
+  const lista = s => s.split(',').map(t => t.trim()).filter(Boolean);
+  document.getElementById('pa_ok').onclick = async () => {
+    if (!val('pa_n')) { toast('Ponle nombre al perfil.'); return; }
+    const marcados = id => [...document.querySelectorAll(`#${id} input:checked`)].map(i => i.value); const pesosN = {}; document.querySelectorAll('[data-peso]').forEach(i => pesosN[i.dataset.peso] = Number(i.value) || 0);
+    await api.guardarPerfilAcompanamiento({ ...(x ? { id: x.id } : {}), estudiante_id: val('pa_est'), nombre: val('pa_n'), formacion_requerida: marcados('pa_fr'), formacion_deseable: marcados('pa_fd'), experiencia: val('pa_exp') || null, necesidades: lista(val('pa_nec')), habilidades: lista(val('pa_hab')), conocimientos: lista(val('pa_con')), caracteristicas: val('pa_car') || null, edad_min: val('pa_emin') ? Number(val('pa_emin')) : null, edad_max: val('pa_emax') ? Number(val('pa_emax')) : null, zona: val('pa_zona') || null, direccion_escuela: val('pa_dir') || null, hora_inicio: val('pa_hi') || null, hora_fin: val('pa_hf') || null, dias: [...document.querySelectorAll('[data-pdia]:checked')].map(c => Number(c.dataset.pdia)), otros_requisitos: val('pa_otros') || null, pesos: pesosN, activo: val('pa_act') });
+    cerrarModal(); toast('Perfil guardado'); alGuardar();
+  };
+}
+
+function ajustes(d, alGuardar) {
+  const c = d.config;
+  modal('Ajustes del reclutamiento', `<div class="form"><div class="f"><label>Liga de tu agenda para entrevistas (Google Calendar «Citas» u otra)</label><input id="aj_agenda" value="${esc(c.enlace_agenda_entrevistas || '')}" placeholder="https://calendar.app.google/…"><div class="small muted">Se incluye en el correo de invitación a entrevista para que la persona elija horario.</div></div><div class="f"><label>Dirección pública de SIGAE</label><input id="aj_url" value="${esc(c.url_sitio || '')}"></div><div class="f"><label>Remitente de los correos (dominio verificado en Resend)</label><input id="aj_rem" value="${esc(c.correo_remitente || '')}"></div></div>`, `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="aj_ok">Guardar</button>`);
+  document.getElementById('aj_ok').onclick = async () => { await api.guardarConfiguracion({ enlace_agenda_entrevistas: val('aj_agenda'), url_sitio: val('aj_url'), correo_remitente: val('aj_rem') }); cerrarModal(); toast('Ajustes guardados'); alGuardar(); };
+}
+
+/** Compatibilidad de las monitoras existentes con el perfil activo de un estudiante (para asignar o cambiar monitora). */
+export async function compatibilidadMonitoras(estId, monitoras, cat) {
+  const perfiles = (await api.perfilesAcompanamiento()).filter(x => x.estudiante_id === estId && x.activo); const pa = perfiles[0]; if (!pa) return {};
+  const out = {}; monitoras.forEach(m => { out[m.id] = calcular(personaDesdeMonitora(m), pa, { etiquetaFormacion: k => cat._etiqueta('formacion_academica', k) }).porcentaje; }); return out;
+}

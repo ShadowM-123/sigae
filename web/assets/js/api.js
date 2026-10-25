@@ -243,3 +243,20 @@ export async function vinculosDeEspecialista(perfilId) {
 }
 /** Solo demo: crea un perfil sin pasar por auth (en producción el usuario se crea en Supabase Auth y luego se vincula). */
 export async function crearPerfilDemo(p) { return ok(await db.from('perfiles').insert(p).select().single()); }
+
+/* ---------- paso H: reclutamiento ---------- */
+export async function configuracion() { const rows = ok(await db.from('configuracion').select('*')); const o = {}; rows.forEach(r => o[r.clave] = r.valor); return o; }
+export async function guardarConfiguracion(obj) { for (const [clave, valor] of Object.entries(obj)) ok(await db.from('configuracion').upsert({ clave, valor, actualizado_en: new Date().toISOString() }, { onConflict: 'clave' })); }
+export async function perfilesAcompanamiento() { return ok(await db.from('perfiles_acompanamiento').select('*').order('creado_en', { ascending: false })); }
+export async function guardarPerfilAcompanamiento(p) { return guardarPorId('perfiles_acompanamiento', p); }
+export async function postulaciones() { return ok(await db.from('postulaciones').select('*').order('creado_en', { ascending: false })); }
+export async function postulacion(id) { return ok(await db.from('postulaciones').select('*').eq('id', id).maybeSingle()); }
+export async function guardarPostulacion(p) { return guardarPorId('postulaciones', p); }
+export async function postulacionDetalle(id) { return ok(await db.from('postulacion_detalle').select('*').eq('postulacion_id', id).maybeSingle()); }
+export async function referencias(id) { return ok(await db.from('referencias').select('*').eq('postulacion_id', id)); }
+export async function postulacionHistorial(id) { return ok(await db.from('postulacion_historial').select('*').eq('postulacion_id', id).order('fecha')); }
+export async function registrarHistorialPostulacion(h) { return ok(await db.from('postulacion_historial').insert({ ...h, fecha: new Date().toISOString() }).select().single()); }
+export async function correos({ estado } = {}) { let q = db.from('correos_enviados').select('*').order('fecha', { ascending: false }); if (estado) q = q.eq('estado', estado); return ok(await q); }
+export async function guardarCorreo(c) { return guardarPorId('correos_enviados', c); }
+export async function urlCv(path) { const r = await db.storage.from('curriculums').createSignedUrl(path, 3600); return r.data?.signedUrl || ''; }
+export async function seleccionarPostulante(id) { return ok(await db.rpc('seleccionar_postulante', { p_postulacion: id })); }

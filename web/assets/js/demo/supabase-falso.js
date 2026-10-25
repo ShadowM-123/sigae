@@ -3,7 +3,7 @@
    auth, storage, rpc) sobre datos en memoria, persistidos en localStorage.
    Se activa con ?demo=1. NUNCA contiene datos reales. */
 
-const VER = 9;
+const VER = 10;
 const KEY = 'sigae_demo_db_v' + VER;
 const KEY_SESION = 'sigae_demo_sesion';
 
@@ -196,6 +196,48 @@ function semilla() {
   for (let off = -30; off <= 0; off++) { [P.m1, P.m2, P.m3].forEach((m, i) => { if ((off + i) % 2 === 0) accesos_sesion.push({ id: uuid(), perfil_id: m, fecha_hora: `${dia(off)}T07:${50 + i}:00`, dispositivo: 'celular' }); }); if (off % 3 === 0) accesos_sesion.push({ id: uuid(), perfil_id: P.f1, fecha_hora: `${dia(off)}T18:30:00`, dispositivo: 'celular' }); }
 
 
+
+  // ---------- Reclutamiento ----------
+  const configuracion = [
+    { clave: 'enlace_agenda_entrevistas', valor: '', descripcion: 'Liga a la página de citas de Dirección.' },
+    { clave: 'correo_remitente', valor: 'SHADOW Monitoras Educativas <hola@shadow.mx>', descripcion: 'Remitente de los correos.' },
+    { clave: 'url_sitio', valor: '', descripcion: 'Dirección pública de SIGAE.' },
+  ];
+  const perfiles_acompanamiento = [
+    { id: 'pa-1', estudiante_id: 'est-santiago', nombre: 'Monitora para Santiago · ciclo 2026-2027', formacion_requerida: ['educacion_especial', 'psicologia_educativa'], formacion_deseable: ['psicologia_general', 'educacion'], experiencia: 'acompañamiento escolar, primaria, trabajo con familias', experiencia_min_anios: 1, necesidades: ['TEA', 'regulación sensorial', 'transiciones', 'anticipación'], habilidades: ['apoyos visuales', 'plan de calma'], conocimientos: ['TEACCH', 'comunicación funcional'], caracteristicas: 'Paciente, observadora, con voz tranquila; que sepa trabajar en equipo con la maestra.', edad_min: 22, edad_max: 45, zona: 'Centro', direccion_escuela: 'Av. Universidad 2300, Chihuahua', hora_inicio: '07:45', hora_fin: '14:45', dias: [1,2,3,4,5], otros_requisitos: 'Disponibilidad para capacitación mensual en sábado.', pesos: { formacion: 25, experiencia: 25, necesidades: 25, disponibilidad: 15, zona: 10 }, activo: true, creado_en: `${dia(-40)}T10:00:00` },
+    { id: 'pa-2', estudiante_id: 'est-emiliano', nombre: 'Monitora para Emiliano · apoyo en lectoescritura', formacion_requerida: [], formacion_deseable: ['educacion_especial', 'educacion', 'puericultura'], experiencia: 'síndrome de Down, motricidad fina, lectoescritura inicial', experiencia_min_anios: null, necesidades: ['síndrome de Down', 'motricidad fina', 'autonomía', 'lectura'], habilidades: ['material concreto', 'rutinas visuales'], conocimientos: [], caracteristicas: 'Cálida y constante.', edad_min: null, edad_max: null, zona: 'Poniente', direccion_escuela: 'Blvd. Ortiz Mena 1800, Chihuahua', hora_inicio: '07:45', hora_fin: '13:15', dias: [1,2,3,4,5], otros_requisitos: '', pesos: { formacion: 10, experiencia: 30, necesidades: 30, disponibilidad: 20, zona: 10 }, activo: true, creado_en: `${dia(-20)}T10:00:00` },
+  ];
+  const postulaciones = [
+    { id: 'post-1', folio: 'SH-2610-0001', nombre_original: 'María Fernanda Lozano Ruiz', nombre_normalizado: 'maria fernanda lozano ruiz', correo: 'mafer.lozano@correo.demo', telefono: '614 555 0101', cv_path: null, como_se_entero: 'redes', etapa: 'recibida', perfil_acompanamiento_id: null, compatibilidad: null, token_2a_etapa: 'tok-post-1', creado_en: `${dia(-1)}T09:12:00`, actualizado_en: `${dia(-1)}T09:12:00` },
+    { id: 'post-2', folio: 'SH-2610-0002', nombre_original: 'Ana Sofía Beltrán Mora', nombre_normalizado: 'ana sofia beltran mora', correo: 'anasofia.beltran@correo.demo', telefono: '614 555 0102', cv_path: null, como_se_entero: 'recomendacion', etapa: '2a_etapa_completa', perfil_acompanamiento_id: 'pa-1', compatibilidad: null, token_2a_etapa: 'tok-post-2', creado_en: `${dia(-9)}T18:30:00`, actualizado_en: `${dia(-2)}T20:10:00` },
+    { id: 'post-3', folio: 'SH-2610-0003', nombre_original: 'Jorge Luis Carrillo Peña', nombre_normalizado: 'jorge luis carrillo pena', correo: 'jl.carrillo@correo.demo', telefono: '614 555 0103', cv_path: null, como_se_entero: 'bolsa', etapa: 'invitada_2a_etapa', perfil_acompanamiento_id: 'pa-2', compatibilidad: null, token_2a_etapa: 'tok-post-3', creado_en: `${dia(-6)}T11:00:00`, actualizado_en: `${dia(-4)}T10:00:00` },
+    { id: 'post-4', folio: 'SH-2609-0007', nombre_original: 'Daniela Ruiz Carrasco', nombre_normalizado: 'daniela ruiz carrasco', correo: 'daniela@shadow.demo', telefono: '614 100 0001', cv_path: null, como_se_entero: 'recomendacion', etapa: 'seleccionada', perfil_acompanamiento_id: 'pa-1', compatibilidad: { porcentaje: 88, parcial: false, calculado_en: `${dia(-200)}T10:00:00`, perfil_id: 'pa-1', pesos: { formacion: 25, experiencia: 25, necesidades: 25, disponibilidad: 15, zona: 10 }, desglose: { formacion: { puntaje: 100, peso: 25, nota: 'Educación especial: coincide con la formación requerida.' }, experiencia: { puntaje: 85, peso: 25, nota: 'Menciona: acompañamiento escolar, primaria.' }, necesidades: { puntaje: 85, peso: 25, nota: 'Experiencia relacionada con: TEA, transiciones.' }, disponibilidad: { puntaje: 100, peso: 15, nota: 'Cubre 100 % de los días y 100 % del horario.' }, zona: { puntaje: 55, peso: 10, nota: 'Vive en Norte; la escuela está en zona Centro. Confirma traslados.' } } }, token_2a_etapa: 'tok-post-4', entrevista_fecha: `${dia(-215)}T10:00:00`, entrevista_notas: 'Muy clara sobre el rol; experiencia real con TEA.', monitora_perfil_id: P.m1, creado_en: `${dia(-230)}T10:00:00`, actualizado_en: `${dia(-200)}T10:00:00` },
+    { id: 'post-5', folio: 'SH-2610-0004', nombre_original: 'Karla Ivette Muñoz Soto', nombre_normalizado: 'karla ivette munoz soto', correo: 'karla.munoz@correo.demo', telefono: '614 555 0105', cv_path: null, como_se_entero: 'escuela', etapa: 'cerrada', etapa_al_cerrar: 'recibida', motivo_cierre: 'Busca horario vespertino; la vacante es matutina.', perfil_acompanamiento_id: 'pa-1', compatibilidad: null, token_2a_etapa: 'tok-post-5', creado_en: `${dia(-12)}T16:45:00`, actualizado_en: `${dia(-10)}T09:00:00` },
+    { id: 'post-6', folio: 'SH-2610-0005', nombre_original: 'Lucía Esparza Villanueva', nombre_normalizado: 'lucia esparza villanueva', correo: 'lucia.esparza@correo.demo', telefono: '614 555 0106', cv_path: null, como_se_entero: 'redes', etapa: 'entrevista_agendada', perfil_acompanamiento_id: 'pa-2', compatibilidad: null, token_2a_etapa: 'tok-post-6', entrevista_fecha: `${dia(2)}T11:00:00`, creado_en: `${dia(-15)}T08:20:00`, actualizado_en: `${dia(-3)}T12:00:00` },
+  ];
+  const postulacion_detalle = [
+    { postulacion_id: 'post-2', edad: 27, fecha_nacimiento: '1999-04-12', calle_numero: 'Calle Aldama 1420', colonia: 'Centro', cp: '31000', ciudad: 'Chihuahua', formacion: 'psicologia_educativa', formacion_otra: null, tiene_titulo: true, tiene_cedula: true, cedula: '11223344', intereses: 'Leer, senderismo, talleres de arte con niños.', trabaja_actualmente: true, horario_actual: 'Lunes a viernes de 16:00 a 20:00 en un centro de tareas', disponibilidad: { dias: [1,2,3,4,5], hora_inicio: '07:00', hora_fin: '15:00' }, expectativa_economica: '$10,000 a $12,000', sabe_que_es_monitora: 'Es quien acompaña al estudiante dentro del aula para favorecer su participación y autonomía, en coordinación con la maestra y la familia; registra lo que pasa en la jornada.', por_que_candidata: 'Dos años acompañando a un niño con TEA en primaria; manejo apoyos visuales, anticipación de transiciones y plan de calma.', experiencia_texto: 'Dos años como maestra sombra en primaria con un niño con TEA; prácticas en USAER con regulación sensorial.', completado_en: `${dia(-2)}T20:10:00` },
+    { postulacion_id: 'post-6', edad: 31, fecha_nacimiento: '1995-02-03', calle_numero: 'Priv. de las Palmas 8', colonia: 'Campestre', cp: '31238', ciudad: 'Chihuahua', formacion: 'educacion', formacion_otra: null, tiene_titulo: true, tiene_cedula: false, cedula: null, intereses: 'Cocinar, música, voluntariado en una fundación de Down.', trabaja_actualmente: false, horario_actual: null, disponibilidad: { dias: [1,2,3,4,5], hora_inicio: '07:30', hora_fin: '14:00' }, expectativa_economica: '$9,500', sabe_que_es_monitora: 'Acompaña y apoya al estudiante para que aprenda y participe con la mayor autonomía posible.', por_que_candidata: 'Cuatro años de voluntariado con niños con síndrome de Down; trabajo motricidad fina y lectura inicial con material concreto.', experiencia_texto: 'Voluntaria cuatro años en fundación con niños con síndrome de Down; un año como auxiliar en preescolar.', completado_en: `${dia(-5)}T19:00:00` },
+    { postulacion_id: 'post-4', edad: 29, fecha_nacimiento: '1996-' + dia(12).slice(5), calle_numero: 'Calle Río Bravo 210', colonia: 'Norte', cp: '31100', ciudad: 'Chihuahua', formacion: 'educacion_especial', formacion_otra: null, tiene_titulo: true, tiene_cedula: true, cedula: '12345678', intereses: 'Yoga, lectura.', trabaja_actualmente: false, horario_actual: null, disponibilidad: { dias: [1,2,3,4,5], hora_inicio: '07:00', hora_fin: '15:00' }, expectativa_economica: '$10,000', sabe_que_es_monitora: 'Sí; he sido maestra sombra 4 años.', por_que_candidata: 'Experiencia real con TEA y regulación emocional en primaria y CAM.', experiencia_texto: '4 años como maestra sombra en primaria; 1 año en CAM.', completado_en: `${dia(-222)}T10:00:00` },
+  ];
+  const referencias = [
+    { id: uuid(), postulacion_id: 'post-2', centro_trabajo: 'Colegio Palmore', nombre: 'Mtra. Rocío Gándara', cargo: 'Coordinadora de primaria', contacto: '614 555 0201' },
+    { id: uuid(), postulacion_id: 'post-2', centro_trabajo: 'USAER 42', nombre: 'Lic. Héctor Valles', cargo: 'Director', contacto: 'hvalles@correo.demo' },
+    { id: uuid(), postulacion_id: 'post-6', centro_trabajo: 'Fundación Down Chihuahua', nombre: 'Lic. Perla Acosta', cargo: 'Coordinadora de voluntariado', contacto: '614 555 0301' },
+    { id: uuid(), postulacion_id: 'post-6', centro_trabajo: 'Jardín de Niños Gabilondo Soler', nombre: 'Mtra. Irma Terrazas', cargo: 'Directora', contacto: '614 555 0302' },
+  ];
+  const postulacion_historial = [
+    { id: uuid(), postulacion_id: 'post-1', evento: 'recibida', detalle: 'Postulación recibida desde la página pública', fecha: `${dia(-1)}T09:12:00` },
+    { id: uuid(), postulacion_id: 'post-2', evento: 'recibida', detalle: 'Postulación recibida desde la página pública', fecha: `${dia(-9)}T18:30:00` }, { id: uuid(), postulacion_id: 'post-2', evento: 'invitada_2a_etapa', detalle: 'Invitada a la segunda etapa', por: P.dir, fecha: `${dia(-7)}T10:00:00` }, { id: uuid(), postulacion_id: 'post-2', evento: '2a_etapa_completa', detalle: 'Formulario de segunda etapa recibido', fecha: `${dia(-2)}T20:10:00` },
+    { id: uuid(), postulacion_id: 'post-3', evento: 'recibida', detalle: 'Postulación recibida desde la página pública', fecha: `${dia(-6)}T11:00:00` }, { id: uuid(), postulacion_id: 'post-3', evento: 'invitada_2a_etapa', detalle: 'Invitada a la segunda etapa', por: P.dir, fecha: `${dia(-4)}T10:00:00` },
+    { id: uuid(), postulacion_id: 'post-4', evento: 'recibida', detalle: 'Postulación recibida', fecha: `${dia(-230)}T10:00:00` }, { id: uuid(), postulacion_id: 'post-4', evento: 'entrevistada', detalle: 'Entrevista realizada', por: P.dir, fecha: `${dia(-215)}T11:00:00` }, { id: uuid(), postulacion_id: 'post-4', evento: 'seleccionada', detalle: 'Usuario de monitora creado a partir de la postulación', por: P.dir, fecha: `${dia(-200)}T10:00:00` },
+    { id: uuid(), postulacion_id: 'post-5', evento: 'recibida', detalle: 'Postulación recibida desde la página pública', fecha: `${dia(-12)}T16:45:00` }, { id: uuid(), postulacion_id: 'post-5', evento: 'cerrada', detalle: 'Busca horario vespertino; la vacante es matutina.', por: P.dir, fecha: `${dia(-10)}T09:00:00` },
+    { id: uuid(), postulacion_id: 'post-6', evento: 'recibida', detalle: 'Postulación recibida desde la página pública', fecha: `${dia(-15)}T08:20:00` }, { id: uuid(), postulacion_id: 'post-6', evento: 'invitada_2a_etapa', detalle: 'Invitada a la segunda etapa', por: P.dir, fecha: `${dia(-13)}T10:00:00` }, { id: uuid(), postulacion_id: 'post-6', evento: '2a_etapa_completa', detalle: 'Formulario de segunda etapa recibido', fecha: `${dia(-5)}T19:00:00` }, { id: uuid(), postulacion_id: 'post-6', evento: 'invitada_entrevista', detalle: 'Invitada a entrevista', por: P.dir, fecha: `${dia(-4)}T09:00:00` }, { id: uuid(), postulacion_id: 'post-6', evento: 'entrevista_agendada', detalle: 'Entrevista el ' + dia(2), por: P.dir, fecha: `${dia(-3)}T12:00:00` },
+  ];
+  const correos_enviados = [
+    { id: uuid(), destinatario: 'mafer.lozano@correo.demo', plantilla: 'postulacion_recibida', asunto: 'Recibimos tu postulación · SHADOW', cuerpo: 'Hola María, recibimos tu postulación (folio SH-2610-0001). Dirección la revisará y te escribiremos a este correo. Gracias por tu interés en SHADOW Monitoras Educativas.', relacion: 'postulacion:post-1', estado: 'pendiente', fecha: `${dia(-1)}T09:12:00` },
+    { id: uuid(), destinatario: 'jl.carrillo@correo.demo', plantilla: 'invitacion_2a_etapa', asunto: 'Siguiente paso en tu postulación · SHADOW', cuerpo: 'Hola Jorge, revisamos tu currículum y queremos conocerte mejor. Completa el formulario de la segunda etapa en: segunda-etapa.html?t=tok-post-3&demo=1', relacion: 'postulacion:post-3', estado: 'pendiente', fecha: `${dia(-4)}T10:00:00` },
+  ];
   // ---------- Academia SHADOW ----------
   const cursos = [
     { id: 'cur-1', titulo: 'Inducción a SHADOW', descripcion: 'Qué es SHADOW, qué es ser monitora educativa y cómo funciona el acompañamiento en la escuela.', orden: 1, obligatorio: true, publicado: true, creado_por: P.dir, creado_en: `${dia(-120)}T10:00:00` },
@@ -259,7 +301,7 @@ function semilla() {
     { id: 'mat-10', categoria_id: 'cf-4', titulo: 'Rutinas visuales para la mañana y la noche', descripcion: 'Plantillas para imprimir.', tipo: 'enlace', url: 'https://example.org/shadow/rutinas-visuales.pdf', audiencia: 'familias', estado: 'aprobado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-20)}T10:00:00`, creado_en: `${dia(-20)}T10:00:00` },
   ];
   catalogos.push({ id: 'cat-tipo_material-documento', tipo: 'tipo_material', clave: 'documento', etiqueta: 'Documento (PDF, Word, presentación)', orden: 1, activo: true }, { id: 'cat-tipo_material-video', tipo: 'tipo_material', clave: 'video', etiqueta: 'Video (YouTube no listado o Vimeo)', orden: 2, activo: true }, { id: 'cat-tipo_material-enlace', tipo: 'tipo_material', clave: 'enlace', etiqueta: 'Enlace externo', orden: 3, activo: true }, { id: 'cat-tipo_material-imagen', tipo: 'tipo_material', clave: 'imagen', etiqueta: 'Imagen o apoyo visual', orden: 4, activo: true });
-  return { _ver: VER, cursos, lecciones, cuestionarios, progreso_lecciones, intentos_cuestionario, categorias_material, materiales, _archivos: {}, resumenes: [], eventos, especialistas_estudiante, citas, solicitud_historial, perfiles, familias, familia_tutores, estudiantes, monitoras, asignaciones, catalogos, accesos_sesion, bitacoras, bitacora_banos, bitacora_bloques, bitacora_fotos: [], bitacora_sentir_monitora, bitacora_lecturas, ciclos, objetivos, evaluaciones, pagos, tareas, solicitudes, notificaciones };
+  return { _ver: VER, configuracion, perfiles_acompanamiento, postulaciones, postulacion_detalle, referencias, postulacion_historial, correos_enviados, cursos, lecciones, cuestionarios, progreso_lecciones, intentos_cuestionario, categorias_material, materiales, _archivos: {}, resumenes: [], eventos, especialistas_estudiante, citas, solicitud_historial, perfiles, familias, familia_tutores, estudiantes, monitoras, asignaciones, catalogos, accesos_sesion, bitacoras, bitacora_banos, bitacora_bloques, bitacora_fotos: [], bitacora_sentir_monitora, bitacora_lecturas, ciclos, objetivos, evaluaciones, pagos, tareas, solicitudes, notificaciones };
 }
 
 /* ---------- motor ---------- */
@@ -361,7 +403,41 @@ const storage = {
 };
 
 /* ---------- rpc falso ---------- */
+const normalizar = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 const RPC = {
+  postular({ p_nombre, p_correo, p_telefono, p_como_se_entero, p_cv_path }) {
+    if (!p_nombre || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p_correo || '')) throw new Error('Nombre y correo válidos son obligatorios');
+    const n = (DB.postulaciones || []).filter(p => p.correo === p_correo.toLowerCase()).length; const folio = `SH-${dia(0).slice(2, 4)}${dia(0).slice(5, 7)}-${String(100 + (DB.postulaciones || []).length + 1).slice(-4).padStart(4, '0')}`;
+    if (n >= 3) throw new Error('Ya recibimos postulaciones recientes con este correo.');
+    const id = uuid(); const ahora = new Date().toISOString();
+    (DB.postulaciones ||= []).push({ id, folio, nombre_original: p_nombre.trim(), nombre_normalizado: normalizar(p_nombre), correo: p_correo.toLowerCase().trim(), telefono: p_telefono || null, cv_path: p_cv_path || null, como_se_entero: p_como_se_entero || null, etapa: 'recibida', perfil_acompanamiento_id: null, compatibilidad: null, token_2a_etapa: 'tok-' + id.slice(0, 8), creado_en: ahora, actualizado_en: ahora });
+    (DB.postulacion_historial ||= []).push({ id: uuid(), postulacion_id: id, evento: 'recibida', detalle: 'Postulación recibida desde la página pública', fecha: ahora });
+    (DB.correos_enviados ||= []).push({ id: uuid(), destinatario: p_correo.toLowerCase().trim(), plantilla: 'postulacion_recibida', asunto: 'Recibimos tu postulación · SHADOW', cuerpo: `Hola ${p_nombre.trim()}, recibimos tu postulación (folio ${folio}). Dirección la revisará y te escribiremos a este correo. Gracias por tu interés en SHADOW.`, relacion: 'postulacion:' + id, estado: 'pendiente', fecha: ahora });
+    guardar(); return { id, folio };
+  },
+  segunda_etapa_cargar({ p_token }) {
+    const p = (DB.postulaciones || []).find(x => x.token_2a_etapa === p_token); if (!p) throw new Error('Enlace no válido');
+    if (!['invitada_2a_etapa', '2a_etapa_completa'].includes(p.etapa)) throw new Error('Este enlace ya no está activo');
+    const d = (DB.postulacion_detalle || []).find(x => x.postulacion_id === p.id) || null;
+    return { folio: p.folio, nombre: p.nombre_original, correo: p.correo, telefono: p.telefono, completada: p.etapa === '2a_etapa_completa', detalle: d ? { ...d, referencias: (DB.referencias || []).filter(r => r.postulacion_id === p.id) } : null };
+  },
+  segunda_etapa_guardar({ p_token, p_detalle, p_referencias }) {
+    const p = (DB.postulaciones || []).find(x => x.token_2a_etapa === p_token); if (!p || !['invitada_2a_etapa', '2a_etapa_completa'].includes(p.etapa)) throw new Error('Enlace no válido o vencido');
+    const ahora = new Date().toISOString(); DB.postulacion_detalle = (DB.postulacion_detalle || []).filter(x => x.postulacion_id !== p.id); DB.postulacion_detalle.push({ postulacion_id: p.id, ...p_detalle, completado_en: ahora });
+    DB.referencias = (DB.referencias || []).filter(r => r.postulacion_id !== p.id); (p_referencias || []).forEach(r => DB.referencias.push({ id: uuid(), postulacion_id: p.id, ...r }));
+    if (p.etapa === 'invitada_2a_etapa') p.etapa = '2a_etapa_completa'; p.actualizado_en = ahora;
+    (DB.postulacion_historial ||= []).push({ id: uuid(), postulacion_id: p.id, evento: '2a_etapa_completa', detalle: 'Formulario de segunda etapa recibido', fecha: ahora });
+    guardar(); return { ok: true, folio: p.folio };
+  },
+  seleccionar_postulante({ p_postulacion }) {
+    const p = (DB.postulaciones || []).find(x => x.id === p_postulacion); if (!p) throw new Error('No existe la postulación'); if (p.etapa === 'seleccionada') return p.monitora_perfil_id;
+    const d = (DB.postulacion_detalle || []).find(x => x.postulacion_id === p.id) || {}; const ahora = new Date().toISOString();
+    let perfil = DB.perfiles.find(x => (x.correo || '').toLowerCase() === p.correo); if (!perfil) { perfil = { id: 'p-' + uuid().slice(0, 8), rol: 'monitora', nombre: p.nombre_original, telefono: p.telefono, correo: p.correo, fecha_nacimiento: d.fecha_nacimiento || null, activo: true, creado_en: ahora }; DB.perfiles.push(perfil); }
+    if (!DB.monitoras.find(m => m.perfil_id === perfil.id)) DB.monitoras.push({ perfil_id: perfil.id, formacion: d.formacion || null, formacion_otra: d.formacion_otra || null, tiene_titulo: d.tiene_titulo ?? null, tiene_cedula: d.tiene_cedula ?? null, cedula: d.cedula || null, experiencia: d.experiencia_texto || null, especialidades: [], zonas: d.colonia ? [d.colonia] : [], disponibilidad: d.disponibilidad || {}, fecha_ingreso: dia(0), postulacion_id: p.id, estado: 'activa', creado_en: ahora });
+    p.etapa = 'seleccionada'; p.monitora_perfil_id = perfil.id; p.actualizado_en = ahora;
+    (DB.postulacion_historial ||= []).push({ id: uuid(), postulacion_id: p.id, evento: 'seleccionada', detalle: 'Usuario de monitora creado a partir de la postulación', fecha: ahora });
+    guardar(); return perfil.id;
+  },
   cambiar_monitora({ p_estudiante, p_monitora, p_motivo }) {
     const hoyIso = dia(0);
     DB.asignaciones.forEach(a => { if (a.estudiante_id === p_estudiante && a.activa) { a.activa = false; a.fecha_fin = hoyIso; a.motivo_cambio = p_motivo || a.motivo_cambio; } });

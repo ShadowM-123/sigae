@@ -8,6 +8,7 @@ import * as D from './direccion-d.js';
 import * as E from './direccion-e.js';
 import * as F from './direccion-f.js';
 import * as G from './direccion-g.js';
+import * as H from './direccion-h.js';
 import * as pdf from './pdf.js';
 import { avisosDireccion, pintarAvisos } from './avisos.js';
 import { modoDemo } from './supabase.js';
@@ -23,11 +24,11 @@ const ctx = { perfil, cat, ir: (t, p) => ir(t, p), verEstudiante: id => verEstud
 const TABS = [
   { grupo: 'Operación' }, { id: 'inicio', ic: '▦', tx: 'Inicio' }, { id: 'pendientes', ic: '☑', tx: 'Pendientes' }, { id: 'calendario', ic: '📅', tx: 'Calendario' }, { id: 'bitacoras', ic: '✎', tx: 'Bitácoras' }, { id: 'estudiantes', ic: '☺', tx: 'Estudiantes' }, { id: 'monitoras', ic: '✦', tx: 'Monitoras' }, { id: 'familias', ic: '⌂', tx: 'Familias' },
   { grupo: 'Seguimiento' }, { id: 'resumenes', ic: '▤', tx: 'Resúmenes' }, { id: 'evaluaciones', ic: '◔', tx: 'Evaluaciones' }, { id: 'indicadores', ic: '↗', tx: 'Indicadores' },
-  { grupo: 'Equipo y red' }, { id: 'academia', ic: '▶', tx: 'Academia' }, { id: 'materiales', ic: '▤', tx: 'Materiales' }, { id: 'especialistas', ic: '✚', tx: 'Especialistas' }, { id: 'reclutamiento', ic: '⇄', tx: 'Reclutamiento', pronto: true },
+  { grupo: 'Equipo y red' }, { id: 'academia', ic: '▶', tx: 'Academia' }, { id: 'materiales', ic: '▤', tx: 'Materiales' }, { id: 'especialistas', ic: '✚', tx: 'Especialistas' }, { id: 'reclutamiento', ic: '⇄', tx: 'Reclutamiento' },
   { grupo: 'Configuración' }, { id: 'catalogos', ic: '☰', tx: 'Catálogos' },
 ];
 const { pintar: pintarTabs } = marco({ perfil, tabs: TABS, activa: 'inicio', onTab: ir, subtitulo: 'Dirección' });
-async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx), resumenes: () => D.resumenes(vista, ctx), evaluaciones: p => E.evaluaciones(vista, ctx, p), indicadores: () => E.indicadores(vista, ctx), academia: p => F.academia(vista, ctx, p), materiales: p => F.materiales(vista, ctx, p), especialistas: () => G.especialistas(vista, ctx) }[tab] || inicio)(params); }
+async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx), resumenes: () => D.resumenes(vista, ctx), evaluaciones: p => E.evaluaciones(vista, ctx, p), indicadores: () => E.indicadores(vista, ctx), academia: p => F.academia(vista, ctx, p), materiales: p => F.materiales(vista, ctx, p), especialistas: () => G.especialistas(vista, ctx), reclutamiento: p => H.reclutamiento(vista, ctx, p) }[tab] || inicio)(params); }
 
 function nuevaTarea(alGuardar) {
   api.panoramaEstudiantes().then(pan => {
@@ -171,8 +172,9 @@ async function verEstudiante(id) {
   document.getElementById('eEditar').onclick = () => editarEstudiante(e);
   document.getElementById('eDesc').onclick = () => D.elegirPeriodo(`Descargar compendio de ${nombreCorto(e.nombre)}`, p => D.descargarCompendio(e, p, cat));
   document.querySelectorAll('[data-bit]').forEach(li => li.onclick = () => { const b = bs.find(x => x.id === li.dataset.bit); verBitacora(b, e, monis.find(m => m.id === b.monitora_id), () => verEstudiante(id)); });
-  document.getElementById('eCambiar').onclick = () => {
-    modal(moni ? 'Cambiar monitora' : 'Asignar monitora', `<div class="form"><div class="f"><label>Nueva monitora</label><select id="cm_m">${monis.filter(m => m.id !== moni?.id && (m.estado || 'activa') === 'activa').map(m => `<option value="${m.id}">${esc(m.nombre)} · ${esc((m.especialidades || []).join(', '))}</option>`).join('')}</select></div>${moni ? `<div class="f"><label>Motivo del cambio</label><input id="cm_motivo" placeholder="Ej. cambio de horario de la monitora"></div>` : ''}<div class="alerta"><span class="tx small">La monitora anterior pierde el acceso al expediente desde hoy. Sus bitácoras, evaluaciones y reportes se conservan tal cual. La nueva ve el expediente completo para dar continuidad.</span></div></div>`,
+  document.getElementById('eCambiar').onclick = async () => {
+    const compat = await H.compatibilidadMonitoras(id, monis, cat);
+    modal(moni ? 'Cambiar monitora' : 'Asignar monitora', `<div class="form"><div class="f"><label>Nueva monitora${Object.keys(compat).length ? ' <span class="muted">· % = compatibilidad con el perfil de acompañamiento activo</span>' : ''}</label><select id="cm_m">${monis.filter(m => m.id !== moni?.id && (m.estado || 'activa') === 'activa').sort((a, b) => (compat[b.id] || 0) - (compat[a.id] || 0)).map(m => `<option value="${m.id}">${compat[m.id] != null ? compat[m.id] + ' % · ' : ''}${esc(m.nombre)} · ${esc((m.especialidades || []).join(', '))}</option>`).join('')}</select></div>${moni ? `<div class="f"><label>Motivo del cambio</label><input id="cm_motivo" placeholder="Ej. cambio de horario de la monitora"></div>` : ''}<div class="alerta"><span class="tx small">La monitora anterior pierde el acceso al expediente desde hoy. Sus bitácoras, evaluaciones y reportes se conservan tal cual. La nueva ve el expediente completo para dar continuidad.</span></div></div>`,
       `<button class="btn" data-cerrar>Cancelar</button><button class="btn p" id="cm_ok">Confirmar</button>`);
     document.getElementById('cm_ok').onclick = async () => { await api.cambiarMonitora(id, val('cm_m'), val('cm_motivo')); cerrarModal(); toast('Asignación actualizada'); estudiantes({ id }); };
   };
@@ -221,7 +223,7 @@ async function verMonitora(id) {
   const comentarios = sentir.filter(s => s.comentario);
   modal(esc(m.nombre), `
     <div class="grid g2">
-      <div class="card"><div class="hd"><h3>Datos</h3></div><div class="bd small"><b>${esc(cat._etiqueta('formacion_academica', m.formacion))}</b>${m.tiene_titulo ? ' · con título' : ''}${m.tiene_cedula ? ` · cédula ${esc(m.cedula || '')}` : ''}<p>${esc(m.experiencia || '')}</p><p>Especialidades: ${(m.especialidades || []).map(x => `<span class="tag gray">${esc(x)}</span>`).join(' ')}</p><p>Zonas: ${(m.zonas || []).join(', ')} · Tel. ${esc(m.telefono || '')} · ${esc(m.correo || '')}</p><p class="muted">Ingreso: ${fecha(m.fecha_ingreso)} · Cumpleaños: ${fecha(m.fecha_nacimiento)}</p></div></div>
+      <div class="card"><div class="hd"><h3>Datos</h3></div><div class="bd small"><b>${esc(cat._etiqueta('formacion_academica', m.formacion))}</b>${m.tiene_titulo ? ' · con título' : ''}${m.tiene_cedula ? ` · cédula ${esc(m.cedula || '')}` : ''}<p>${esc(m.experiencia || '')}</p><p>Especialidades: ${(m.especialidades || []).map(x => `<span class="tag gray">${esc(x)}</span>`).join(' ')}</p><p>Zonas: ${(m.zonas || []).join(', ')} · Tel. ${esc(m.telefono || '')} · ${esc(m.correo || '')}</p><p class="muted">Ingreso: ${fecha(m.fecha_ingreso)} · Cumpleaños: ${fecha(m.fecha_nacimiento)}${m.postulacion_id ? ' · viene del reclutamiento (expediente conservado)' : ''}</p></div></div>
       <div class="card"><div class="hd"><h3>Estudiantes y actividad</h3></div><div class="bd small">${es.map(e => `<div><b>${esc(e.nombre)}</b> · ${esc(e.escuela)}</div>`).join('') || '<span class="tag gray">Sin asignación</span>'}<p style="margin-top:8px">Accesos en 30 días: <b>${acc.length}</b>${acc.length ? ` · último ${fecha(acc.map(a => a.fecha_hora).sort().pop())}` : ''}</p><div id="acadMoni" style="margin-top:10px"><span class="muted">Cargando Academia…</span></div></div></div>
     </div>
     <div class="card" style="margin-top:12px"><div class="hd"><h3>¿Cómo se ha sentido? <span class="tag conf">Confidencial</span></h3><div class="sp"></div><span class="small muted">Últimos 30 días · ${sentir.length} jornadas</span></div><div class="bd">

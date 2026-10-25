@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Postúlate como monitora educativa · SHADOW</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/sigae.css">
+</head>
+<body>
+<main class="entrada"><div class="caja" style="max-width:560px">
+  <img class="logo-img" src="assets/img/logo-shadow.png" alt="Shadow Monitoras Educativas" onerror="this.onerror=null;this.src='assets/img/logo-shadow.svg'">
+  <h1>Postúlate como monitora educativa</h1>
+  <div class="sub">Acompañamos a niñas y niños con necesidades de apoyo dentro de su escuela. Si te interesa colaborar con SHADOW, déjanos tus datos y tu currículum; Dirección los revisa y te escribe a tu correo.</div>
+  <div id="aviso"></div>
+  <div class="card" id="cajaForm"><div class="bd">
+    <form id="f" class="form">
+      <div class="f"><label>Nombre completo *</label><input id="p_nombre" required autocomplete="name"></div>
+      <div class="form g2"><div class="f"><label>Teléfono de contacto *</label><input id="p_tel" type="tel" required autocomplete="tel" placeholder="614 000 0000"></div><div class="f"><label>Correo electrónico *</label><input id="p_correo" type="email" required autocomplete="email"></div></div>
+      <div class="f"><label>Currículum (PDF o Word, máx. 10 MB) *</label><input id="p_cv" type="file" accept=".pdf,.doc,.docx" required></div>
+      <div class="f"><label>¿Cómo te enteraste de la vacante? *</label><select id="p_como" required><option value="">Elige una opción</option></select></div>
+      <label class="chk small"><input type="checkbox" id="p_priv" required> Acepto que SHADOW resguarde mis datos y mi currículum únicamente para este proceso de selección.</label>
+      <div id="error" class="alerta bad oculto"><span class="tx"></span></div>
+      <button class="btn p g" type="submit" id="btnEnviar">Enviar mi postulación</button>
+    </form>
+  </div></div>
+  <div class="card oculto" id="cajaOk"><div class="bd" style="text-align:center;padding:28px 18px">
+    <div style="font-size:40px">✅</div><h2 style="font-family:var(--serif);font-weight:800;margin:8px 0">¡Recibimos tu postulación!</h2>
+    <p>Tu folio es <b id="okFolio"></b>. Guárdalo. Te escribiremos a <b id="okCorreo"></b> cuando Dirección revise tu perfil.</p>
+    <p class="small muted">Si avanzas, recibirás un enlace para completar un formulario con más información sobre ti.</p>
+  </div></div>
+  <p class="small muted" style="margin-top:18px;text-align:center">¿Ya tienes cuenta en SIGAE? <a href="index.html">Entrar</a></p>
+</div></main>
+<script type="module" src="assets/js/postulacion.js"></script>
+</body>
+</html>

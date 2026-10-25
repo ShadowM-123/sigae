@@ -2,6 +2,20 @@
 
 Las decisiones de arranque están en `01-Arquitectura.md` §11. Aquí van las posteriores, la más reciente arriba. Formato: fecha · decisión · por qué · quién.
 
+## 2026-10-25 — Pasos G y H construidos: especialistas y reclutamiento
+**G · Especialistas y personal escolar (`especialista.html`, `direccion-g.js`, migración `0006`).**
+- Acceso de **solo consulta**: datos mínimos del caso, monitora asignada y, únicamente si Dirección marca `puede_ver_bitacoras`, las bitácoras enviadas (nunca borradores, nunca la sección confidencial, sin botón de descarga). La regla `puede_ver_bitacora` incluye ahora al especialista autorizado. — Claude.
+- Dar cuenta = crear el usuario en Supabase Auth con su correo y **vincularlo** desde Dirección → Especialistas (en demo se crea al instante). La invitación automática por correo llega con Resend (paso J). — Claude.
+- Solicitudes de visita escolar y de reporte con los campos del documento de Dirección; llegan a Pendientes como las de familias; mismos estados y mismo historial. — Claude.
+
+**H · Reclutamiento (`postulacion.html`, `segunda-etapa.html`, `direccion-h.js`, `compatibilidad.js`, `correos.js`, migración `0007`).**
+- La tabla `postulaciones` **no se expone al público**: la página pública llama a la función `postular` (security definer) y sube el CV a `curriculums/entrantes/` (política de solo inserción). Folio legible `SH-AAMM-NNNN`, nombre normalizado para buscar y original para contacto; límite de 3 postulaciones por correo en 30 días. — Claude.
+- Segunda etapa por **enlace con token** (`segunda_etapa_cargar` / `segunda_etapa_guardar`): conserva contacto, guarda en la misma postulación, referencias en tabla aparte, campos condicionales (título → cédula → número; trabaja → horario). — Claude.
+- **Compatibilidad V1 con reglas** sobre datos estructurados (formación requerida/deseable, palabras clave de experiencia, necesidades del caso, días/horario, zona) con pesos editables por perfil; lo no indispensable y lo sin datos puntúan neutro, no penalizan; se guarda con desglose y fecha. Mismo motor para comparar monitoras existentes al asignar. Siempre es apoyo: el expediente muestra CV y respuestas al lado. — Claude.
+- Decisiones por etapa con historial: avanzar a 2ª etapa (correo con enlace), no continuar (motivo interno + correo cordial), avanzar a entrevista (correo con la liga de agenda de `configuracion`), registrar entrevista (evento en calendario), entrevistada (notas), **seleccionar** (`seleccionar_postulante`: copia datos a `perfiles` + `monitoras` y deja `postulacion_id`; exige que el usuario exista en Auth con ese correo), reabrir. — Claude.
+- **Correos sin Resend todavía:** cada correo queda en `correos_enviados` como *pendiente* con asunto y cuerpo listos para copiar desde Dirección → Reclutamiento → Correos por enviar; la Edge Function `enviar-correo` los procesará cuando Resend esté conectado. — Claude.
+- Tabla `configuracion` (clave → valor) para la liga de agenda, remitente y URL pública. — Claude.
+
 ## 2026-10-25 — Paso F construido: Academia SHADOW, materiales y recursos para familias
 - **Academia** (`academia.js`, `direccion-f.js`, `monitora-f.js`, migración `0005`): cursos → lecciones (video por liga de YouTube no listado/Vimeo, documento en el bucket `academia`, enlace o lectura) → una evaluación por curso. Las preguntas se capturan en **texto pegable** (pregunta, opciones, `*` en la correcta, línea en blanco entre preguntas), igual que la trivia de Biné. Un curso cuenta como completado cuando se vieron todas sus lecciones y, si tiene preguntas, se aprobó con el mínimo (80 % por defecto). Solo lo publicado se ve; Dirección publica. — Claude.
 - Avance: `progreso_lecciones` (la monitora marca «vista») e `intentos_cuestionario` (todos los intentos quedan; cuenta el mejor). Dirección ve avance por monitora, lección por lección, intentos y accesos; la monitora ve su avance en el inicio y en la pestaña. — Claude.

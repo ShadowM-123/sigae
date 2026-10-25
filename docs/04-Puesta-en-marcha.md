@@ -41,7 +41,7 @@ Las migraciones viven en `supabase/migrations/` y se aplican **en orden** y **un
 3. `0003_calendario_citas_especialistas.sql` — eventos, especialistas por estudiante, citas, historial de solicitudes.
 4. `0004_resumenes.sql` — resúmenes semanales y mensuales.
 
-Se aplican con el conector de Supabase en Claude (`apply_migration`, una por archivo, con el mismo nombre del archivo) o pegándolas en el SQL Editor del tablero. Una migración aplicada **no se edita**: se escribe la siguiente.
+Se aplican con la herramienta del repo `supabase/herramientas/supabase_api.py` (`python supabase_api.py migrar supabase/migrations/0001_nucleo.sql`), que usa la Management API con un **token personal** de una cuenta miembro de la organización, guardado en `<carpeta que contiene al repo>/.supabase-token.txt` (fuera del repo, nunca en el chat). También pueden pegarse en el SQL Editor del tablero. El conector de Supabase de Claude solo ve la organización con la que se autorizó, por eso existe la herramienta. Una migración aplicada **no se edita**: se escribe la siguiente.
 
 ### Después de las migraciones
 - Authentication → Providers: solo **Email** (contraseña). Desactivar «Confirm email» mientras Dirección da de alta a las personas a mano; activar cuando entre la función `crear-usuario`.

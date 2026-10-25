@@ -40,13 +40,14 @@ Las migraciones viven en `supabase/migrations/` y se aplican **en orden** y **un
 2. `0002_bitacora_y_seguimiento.sql` — bitácoras y sus subtablas (incluida la confidencial), ciclos, objetivos, evaluaciones, pagos, tareas, solicitudes, notificaciones.
 3. `0003_calendario_citas_especialistas.sql` — eventos, especialistas por estudiante, citas, historial de solicitudes.
 4. `0004_resumenes.sql` — resúmenes semanales y mensuales.
+5. `0005_academia_materiales.sql` — Academia (cursos, lecciones, cuestionarios, progreso, intentos), materiales y recursos, buckets `fotos-bitacoras`, `materiales` y `academia` con sus políticas.
 
 Se aplican con la herramienta del repo `supabase/herramientas/supabase_api.py` (`python supabase_api.py migrar supabase/migrations/0001_nucleo.sql`), que usa la Management API con un **token personal** de una cuenta miembro de la organización, guardado en `<carpeta que contiene al repo>/.supabase-token.txt` (fuera del repo, nunca en el chat). También pueden pegarse en el SQL Editor del tablero. El conector de Supabase de Claude solo ve la organización con la que se autorizó, por eso existe la herramienta. Una migración aplicada **no se edita**: se escribe la siguiente.
 
 ### Después de las migraciones
 - Authentication → Providers: solo **Email** (contraseña). Desactivar «Confirm email» mientras Dirección da de alta a las personas a mano; activar cuando entre la función `crear-usuario`.
 - Authentication → URL Configuration: Site URL `https://shadowm-123.github.io/sigae/web/` y Redirect URLs con esa misma raíz.
-- Storage: buckets `fotos-bitacora` (privado) y `materiales` (privado) con las políticas del documento de arquitectura (se crean en la migración `0005_storage.sql` cuando toque).
+- Storage: los buckets privados `fotos-bitacoras`, `materiales` y `academia` y sus políticas los crea la migración `0005`. No hay nada que configurar a mano.
 - Primer usuario: Dirección se crea desde Authentication → Users → *Add user*, y luego se inserta su fila en `perfiles` con rol `direccion` (ver `supabase/seed/`).
 
 ## 4. Resend (pendiente)

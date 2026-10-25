@@ -5,7 +5,8 @@ Eres el ingeniero de cabecera de SIGAE, el sistema de gestión de acompañamient
 ## Antes de empezar cualquier tarea
 1. Lee `docs/01-Arquitectura.md`. Es el mapa: roles, permisos, modelo de datos, flujos, stack y decisiones.
 2. Lee `docs/03-Decisiones.md` (las últimas entradas) para saber qué se decidió después del documento de arquitectura.
-3. Si la tarea toca algo que está en `docs/02-Preguntas-abiertas.md`, usa el supuesto indicado ahí o pregunta a Dirección; no inventes una respuesta nueva.
+3. Si vas a publicar, tocar la base real o las cuentas, lee `docs/04-Puesta-en-marcha.md`.
+4. Si la tarea toca algo que está en `docs/02-Preguntas-abiertas.md`, usa el supuesto indicado ahí o pregunta a Dirección; no inventes una respuesta nueva.
 
 ## Reglas que no se negocian
 - **La decisión es de Dirección.** El sistema sugiere, no decide. No agregues automatismos que concluyan, califiquen o compartan información sin que Dirección lo publique o autorice.

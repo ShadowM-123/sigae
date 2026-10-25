@@ -214,3 +214,22 @@ export async function guardarObjetivo(o) { return guardarPorId('objetivos', o); 
 export async function objetivosTodos() { return ok(await db.from('objetivos').select('*').order('prioridad')); }
 export async function guardarEvaluacion(ev) { return guardarPorId('evaluaciones', ev); }
 export async function tutoresTodos() { return ok(await db.from('familia_tutores').select('*')); }
+
+/* ---------- paso F: Academia, materiales y recursos ---------- */
+export async function cursos({ soloPublicados = false } = {}) { let q = db.from('cursos').select('*').order('orden').order('creado_en'); if (soloPublicados) q = q.eq('publicado', true); return ok(await q); }
+export async function guardarCurso(c) { return guardarPorId('cursos', c); }
+export async function lecciones(cursoId) { let q = db.from('lecciones').select('*').order('orden'); if (cursoId) q = q.eq('curso_id', cursoId); return ok(await q); }
+export async function guardarLeccion(l) { return guardarPorId('lecciones', l); }
+export async function borrarLeccion(id) { return ok(await db.from('lecciones').delete().eq('id', id)); }
+export async function cuestionarios(cursoId) { let q = db.from('cuestionarios').select('*'); if (cursoId) q = q.eq('curso_id', cursoId); return ok(await q); }
+export async function guardarCuestionario(c) { return c.id ? guardarPorId('cuestionarios', c) : ok(await db.from('cuestionarios').upsert(c, { onConflict: 'curso_id' }).select().single()); }
+export async function progreso(perfilId) { let q = db.from('progreso_lecciones').select('*'); if (perfilId) q = q.eq('perfil_id', perfilId); return ok(await q); }
+export async function marcarLeccion(perfilId, leccionId) { return ok(await db.from('progreso_lecciones').upsert({ perfil_id: perfilId, leccion_id: leccionId, completada_en: new Date().toISOString() }, { onConflict: 'perfil_id,leccion_id' }).select()); }
+export async function intentos(perfilId) { let q = db.from('intentos_cuestionario').select('*').order('fecha', { ascending: false }); if (perfilId) q = q.eq('perfil_id', perfilId); return ok(await q); }
+export async function registrarIntento(i) { return ok(await db.from('intentos_cuestionario').insert(i).select().single()); }
+export async function categoriasMaterial(audiencia) { let q = db.from('categorias_material').select('*').order('orden'); if (audiencia) q = q.eq('audiencia', audiencia); return ok(await q); }
+export async function guardarCategoria(c) { return guardarPorId('categorias_material', c); }
+export async function materiales({ audiencia, estado, subidoPor } = {}) { let q = db.from('materiales').select('*').order('creado_en', { ascending: false }); if (audiencia) q = q.eq('audiencia', audiencia); if (estado) q = q.eq('estado', estado); if (subidoPor) q = q.eq('subido_por', subidoPor); return ok(await q); }
+export async function guardarMaterial(m) { return guardarPorId('materiales', m); }
+export async function subirMaterial(file, prefijo) { const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, ''); const path = `${prefijo}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`; ok(await db.storage.from('materiales').upload(path, file)); return path; }
+export async function urlMaterial(path) { const r = await db.storage.from('materiales').createSignedUrl(path, 3600); return r.data?.signedUrl || ''; }

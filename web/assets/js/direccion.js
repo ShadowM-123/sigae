@@ -6,6 +6,7 @@ import { renderLectura, porcentajeAvance } from './bitacora.js';
 import * as C from './direccion-c.js';
 import * as D from './direccion-d.js';
 import * as E from './direccion-e.js';
+import * as F from './direccion-f.js';
 import * as pdf from './pdf.js';
 import { avisosDireccion, pintarAvisos } from './avisos.js';
 import { modoDemo } from './supabase.js';
@@ -21,11 +22,11 @@ const ctx = { perfil, cat, ir: (t, p) => ir(t, p), verEstudiante: id => verEstud
 const TABS = [
   { grupo: 'Operación' }, { id: 'inicio', ic: '▦', tx: 'Inicio' }, { id: 'pendientes', ic: '☑', tx: 'Pendientes' }, { id: 'calendario', ic: '📅', tx: 'Calendario' }, { id: 'bitacoras', ic: '✎', tx: 'Bitácoras' }, { id: 'estudiantes', ic: '☺', tx: 'Estudiantes' }, { id: 'monitoras', ic: '✦', tx: 'Monitoras' }, { id: 'familias', ic: '⌂', tx: 'Familias' },
   { grupo: 'Seguimiento' }, { id: 'resumenes', ic: '▤', tx: 'Resúmenes' }, { id: 'evaluaciones', ic: '◔', tx: 'Evaluaciones' }, { id: 'indicadores', ic: '↗', tx: 'Indicadores' },
-  { grupo: 'Equipo y red' }, { id: 'academia', ic: '▶', tx: 'Academia', pronto: true }, { id: 'materiales', ic: '▤', tx: 'Materiales', pronto: true }, { id: 'especialistas', ic: '✚', tx: 'Especialistas', pronto: true }, { id: 'reclutamiento', ic: '⇄', tx: 'Reclutamiento', pronto: true },
+  { grupo: 'Equipo y red' }, { id: 'academia', ic: '▶', tx: 'Academia' }, { id: 'materiales', ic: '▤', tx: 'Materiales' }, { id: 'especialistas', ic: '✚', tx: 'Especialistas', pronto: true }, { id: 'reclutamiento', ic: '⇄', tx: 'Reclutamiento', pronto: true },
   { grupo: 'Configuración' }, { id: 'catalogos', ic: '☰', tx: 'Catálogos' },
 ];
 const { pintar: pintarTabs } = marco({ perfil, tabs: TABS, activa: 'inicio', onTab: ir, subtitulo: 'Dirección' });
-async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx), resumenes: () => D.resumenes(vista, ctx), evaluaciones: p => E.evaluaciones(vista, ctx, p), indicadores: () => E.indicadores(vista, ctx) }[tab] || inicio)(params); }
+async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx), resumenes: () => D.resumenes(vista, ctx), evaluaciones: p => E.evaluaciones(vista, ctx, p), indicadores: () => E.indicadores(vista, ctx), academia: p => F.academia(vista, ctx, p), materiales: p => F.materiales(vista, ctx, p) }[tab] || inicio)(params); }
 
 function nuevaTarea(alGuardar) {
   api.panoramaEstudiantes().then(pan => {
@@ -203,7 +204,7 @@ function editarEstudiante(e) {
 async function monitoras(params = {}) {
   const [monis, asigs, pan] = await Promise.all([api.monitoras(), api.asignacionesActivas(), api.panoramaEstudiantes()]);
   const desde = sumarDias(hoy, -30); const [bs, acc] = await Promise.all([api.bitacorasEntre(desde, hoy), api.accesosDe(monis.map(m => m.id), desde + 'T00:00:00')]);
-  vista.innerHTML = `<h1 class="titulo">Monitoras educativas</h1><div class="subtitulo">Equipo activo, sus estudiantes, entregas y accesos. El avance en la Academia llega en un paso posterior.</div>
+  vista.innerHTML = `<h1 class="titulo">Monitoras educativas</h1><div class="subtitulo">Equipo activo, sus estudiantes, entregas, accesos y bienestar. El avance en la Academia está en la pestaña Academia y en el perfil de cada una.</div>
   <div class="card"><div class="bd sin"><div class="tabla-wrap"><table><thead><tr><th>Monitora</th><th>Formación</th><th>Estudiante(s)</th><th>Bitácoras 30 d</th><th>Accesos 30 d</th><th>Último acceso</th><th>Bienestar</th><th></th></tr></thead><tbody>
   ${monis.map(m => { const es = asigs.filter(a => a.monitora_id === m.id).map(a => pan.find(e => e.id === a.estudiante_id)).filter(Boolean); const nb = bs.filter(b => b.monitora_id === m.id && b.estado !== 'borrador').length; const na = acc.filter(a => a.perfil_id === m.id); const ult = na.map(a => a.fecha_hora).sort().pop(); return `<tr class="click" data-id="${m.id}"><td><b>${esc(m.nombre)}</b><div class="small muted">Desde ${fecha(m.fecha_ingreso)}</div></td><td class="small">${esc(cat._etiqueta('formacion_academica', m.formacion))}${m.tiene_cedula ? ' · cédula' : ''}</td><td class="small">${es.map(e => esc(nombreCorto(e.nombre))).join('<br>') || '<span class="tag gray">Sin asignar</span>'}</td><td class="mono">${nb}</td><td class="mono">${na.length}</td><td class="small muted">${ult ? fecha(ult) + ' ' + hora(ult) : '—'}</td><td id="bien-${m.id}"><span class="muted small">…</span></td><td><button class="btn s">Ver</button></td></tr>`; }).join('')}</tbody></table></div></div></div>`;
   vista.querySelectorAll('tr[data-id]').forEach(tr => tr.onclick = () => verMonitora(tr.dataset.id));
@@ -220,7 +221,7 @@ async function verMonitora(id) {
   modal(esc(m.nombre), `
     <div class="grid g2">
       <div class="card"><div class="hd"><h3>Datos</h3></div><div class="bd small"><b>${esc(cat._etiqueta('formacion_academica', m.formacion))}</b>${m.tiene_titulo ? ' · con título' : ''}${m.tiene_cedula ? ` · cédula ${esc(m.cedula || '')}` : ''}<p>${esc(m.experiencia || '')}</p><p>Especialidades: ${(m.especialidades || []).map(x => `<span class="tag gray">${esc(x)}</span>`).join(' ')}</p><p>Zonas: ${(m.zonas || []).join(', ')} · Tel. ${esc(m.telefono || '')} · ${esc(m.correo || '')}</p><p class="muted">Ingreso: ${fecha(m.fecha_ingreso)} · Cumpleaños: ${fecha(m.fecha_nacimiento)}</p></div></div>
-      <div class="card"><div class="hd"><h3>Estudiantes y actividad</h3></div><div class="bd small">${es.map(e => `<div><b>${esc(e.nombre)}</b> · ${esc(e.escuela)}</div>`).join('') || '<span class="tag gray">Sin asignación</span>'}<p style="margin-top:8px">Accesos en 30 días: <b>${acc.length}</b>${acc.length ? ` · último ${fecha(acc.map(a => a.fecha_hora).sort().pop())}` : ''}</p><p class="muted">Academia SHADOW: avance, intentos y fechas de acceso llegan en el paso F.</p></div></div>
+      <div class="card"><div class="hd"><h3>Estudiantes y actividad</h3></div><div class="bd small">${es.map(e => `<div><b>${esc(e.nombre)}</b> · ${esc(e.escuela)}</div>`).join('') || '<span class="tag gray">Sin asignación</span>'}<p style="margin-top:8px">Accesos en 30 días: <b>${acc.length}</b>${acc.length ? ` · último ${fecha(acc.map(a => a.fecha_hora).sort().pop())}` : ''}</p><div id="acadMoni" style="margin-top:10px"><span class="muted">Cargando Academia…</span></div></div></div>
     </div>
     <div class="card" style="margin-top:12px"><div class="hd"><h3>¿Cómo se ha sentido? <span class="tag conf">Confidencial</span></h3><div class="sp"></div><span class="small muted">Últimos 30 días · ${sentir.length} jornadas</span></div><div class="bd">
       ${alerta >= 4 ? `<div class="alerta conf" style="margin-bottom:12px"><span class="tx"><b>Tendencia a observar:</b> en ${alerta} de sus últimas ${ultimas.length} jornadas reportó cansancio, incomodidad, ánimo bajo, tristeza o enojo. Puede ser momento de una conversación de acompañamiento.</span></div>` : '<div class="alerta ok" style="margin-bottom:12px"><span class="tx">Sin señales repetidas en las últimas jornadas.</span></div>'}
@@ -229,6 +230,7 @@ async function verMonitora(id) {
       ${comentarios.length ? `<div class="small b" style="margin:12px 0 6px">Comentarios que decidió compartir</div><ul class="lista">${comentarios.map(c => `<li style="padding:8px 0"><div class="tx"><div class="m">${fecha(c.fecha)} · ${(c.sentimientos || []).map(k => cat._etiqueta('sentir_monitora', k)).join(', ')}</div>${esc(c.comentario)}</div></li>`).join('')}</ul>` : ''}
       <div class="small muted" style="margin-top:10px">Esta información es para acompañar al equipo, no para calificarlo. No la ven las familias ni los especialistas y no se incluye en ninguna descarga.</div>
     </div></div>`);
+  F.htmlAcademiaMonitora(id).then(h => { const el = document.getElementById('acadMoni'); if (el) el.innerHTML = h; });
 }
 
 /* ---------- Familias ---------- */

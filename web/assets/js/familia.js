@@ -8,6 +8,7 @@ import { montarCalendario } from './calendario.js';
 import { avisosFamilia, pintarAvisos, ESTADOS_SOL, tagSol } from './avisos.js';
 import { htmlResumen, nombrePeriodo, asegurarAutomaticos } from './resumen.js';
 import { comparativo, htmlComparativo, htmlObjetivos } from './evaluacion.js';
+import { htmlBiblioteca, engancharBiblioteca, abrirMaterial, ICONO_MAT, TIPO_MAT } from './materiales.js';
 import * as pdf from './pdf.js';
 import { modoDemo } from './supabase.js';
 
@@ -20,10 +21,10 @@ const vista = document.getElementById('vista');
 let hijo = hijos[0] || null;
 
 const TABS = [
-  { id: 'inicio', ic: '⌂', tx: 'Inicio' }, { id: 'bitacoras', ic: '☰', tx: 'Bitácoras' }, { id: 'terapias', ic: '🩺', tx: 'Terapias y citas' }, { id: 'recursos', ic: '▤', tx: 'Recursos', pronto: true },
+  { id: 'inicio', ic: '⌂', tx: 'Inicio' }, { id: 'bitacoras', ic: '☰', tx: 'Bitácoras' }, { id: 'terapias', ic: '🩺', tx: 'Terapias y citas' }, { id: 'recursos', ic: '▤', tx: 'Recursos' },
 ];
 const { pintar: pintarTabs } = marco({ perfil, tabs: TABS, activa: 'inicio', onTab: ir, subtitulo: 'Portal de la familia' });
-async function ir(tab) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, terapias }[tab] || inicio)(); }
+async function ir(tab) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, terapias, recursos }[tab] || inicio)(); }
 
 const selectorHijo = () => hijos.length > 1 ? `<div class="f" style="margin-bottom:12px"><label>Hijo o hija</label><select id="selHijo">${hijos.map(e => `<option value="${e.id}" ${hijo?.id === e.id ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('')}</select></div>` : '';
 const F = { educacion_especial: 'Lic. en Educación Especial', educacion: 'Lic. en Educación', puericultura: 'Técnico en puericultura', psicologia_general: 'Lic. en Psicología', psicologia_clinica: 'Lic. en Psicología Clínica', psicologia_educativa: 'Lic. en Psicología Educativa', fisioterapia: 'Fisioterapeuta', medicina: 'Médica', trabajo_social: 'Trabajadora social' };
@@ -57,12 +58,14 @@ async function inicio() {
     <div class="card"><div class="hd"><h3>Resumen de la semana</h3><div class="sp"></div><button class="btn s" id="btnResumenes">Ver todos</button></div><div class="bd" id="resumenFam"><div class="small muted">Cargando…</div></div></div>
     <div class="card"><div class="hd"><h3>Avisos</h3></div><div class="bd" id="avisosFam"><div class="small muted">Calculando…</div></div></div>
     <div class="card" style="grid-column:1/-1"><div class="hd"><h3>Objetivos y avances del ciclo</h3><div class="sp"></div><button class="btn s" id="btnEvalPdf">Descargar PDF</button></div><div class="bd" id="evalFam"><div class="small muted">Cargando…</div></div></div>
-    <div class="card"><div class="hd"><h3>Recursos para familias</h3></div><div class="bd"><p class="small muted">Videos y guías sobre crianza, autorregulación, límites y los diagnósticos de nuestros estudiantes. Esta sección se habilita en un paso posterior.</p></div></div>
+    <div class="card"><div class="hd"><h3>Recursos para familias</h3><div class="sp"></div><button class="btn s" id="btnRecursos">Ver todos</button></div><div class="bd" id="recFam"><div class="small muted">Cargando…</div></div></div>
   </div>`;
   vista.querySelector('#selHijo')?.addEventListener('change', e => { hijo = hijos.find(x => x.id === e.target.value); inicio(); });
   avisosFamilia(perfil.id, hijo).then(av => { const el = document.getElementById('avisosFam'); if (el) el.innerHTML = pintarAvisos(av, { vacio: 'Sin avisos por ahora. Aquí verás recordatorios de pagos, citas y cumpleaños.' }); });
   api.resumenesDe(hijo.id, { soloPublicados: true }).then(rs => { const el = document.getElementById('resumenFam'); if (!el) return; const r = rs[0]; if (!r) { el.innerHTML = '<div class="small muted">Cada semana SHADOW publica aquí un resumen de cómo le fue a tu hijo o hija. Aún no hay uno publicado.</div>'; return; } el.innerHTML = `<div class="small muted" style="margin-bottom:6px">${nombrePeriodo({ tipo: r.tipo, inicio: r.periodo_inicio, fin: r.periodo_fin })}</div><div class="lectura">${htmlResumen(r, { compacto: true })}</div><div class="row" style="margin-top:10px"><button class="btn s" id="btnResPdf">Descargar PDF</button></div>`; document.getElementById('btnResPdf').onclick = () => pdf.pdfResumen(r, hijo, moni); });
   document.getElementById('btnResumenes').onclick = () => ir('bitacoras');
+  document.getElementById('btnRecursos').onclick = () => ir('recursos');
+  api.materiales({ audiencia: 'familias', estado: 'aprobado' }).then(ms => { const el = document.getElementById('recFam'); if (!el) return; el.innerHTML = ms.length ? `<ul class="lista">${ms.slice(0, 3).map(m => `<li class="click" data-rec="${m.id}" style="padding:8px 0"><span class="ava" style="background:var(--sky);color:var(--navy)">${ICONO_MAT[m.tipo]}</span><div class="tx"><b>${esc(m.titulo)}</b><div class="m">${TIPO_MAT[m.tipo]}</div></div></li>`).join('')}</ul>` : '<div class="small muted">Videos y guías sobre crianza, autorregulación, límites y los diagnósticos de nuestros estudiantes. Pronto habrá contenido aquí.</div>'; el.querySelectorAll('[data-rec]').forEach(li => li.onclick = () => abrirMaterial(ms.find(m => m.id === li.dataset.rec))); });
   Promise.all([api.cicloActivo(hijo.id), api.objetivosDe(hijo.id), api.evaluacionesDe(hijo.id)]).then(([ciclo, objs, evs]) => {
     const el = document.getElementById('evalFam'); if (!el) return;
     const objetivos = objs.filter(o => o.visible_familia && (!ciclo || o.ciclo_id === ciclo.id)); const evals = evs.filter(e => e.visible_familia && (!ciclo || e.ciclo_id === ciclo.id));
@@ -96,6 +99,13 @@ async function bitacoras() {
   vista.querySelector('#selHijo')?.addEventListener('change', e => { hijo = hijos.find(x => x.id === e.target.value); bitacoras(); });
   vista.querySelectorAll('[data-id]').forEach(li => li.onclick = async () => { const b = bs.find(x => x.id === li.dataset.id); const m = modal(`Bitácora · ${fecha(b.fecha_jornada)}`, '<div class="vacio">Cargando…</div>', `<button class="btn" data-cerrar>Cerrar</button><button class="btn" id="fPdf">Descargar PDF</button>`); m.querySelector('#mBd').innerHTML = `<div class="lectura">${await lecturaDe(b, hijo, moni)}</div>`; document.getElementById('fPdf').onclick = () => pdf.pdfBitacora(b, hijo, moni, cat); });
   vista.querySelectorAll('[data-res]').forEach(li => li.onclick = () => { const r = rs.find(x => x.id === li.dataset.res); modal(`Resumen de ${nombreCorto(hijo.nombre)}`, `<div class="small muted" style="margin-bottom:8px">${nombrePeriodo({ tipo: r.tipo, inicio: r.periodo_inicio, fin: r.periodo_fin })}</div><div class="lectura">${htmlResumen(r)}</div>`, `<button class="btn" data-cerrar>Cerrar</button><button class="btn p" id="rPdf">Descargar PDF</button>`); document.getElementById('rPdf').onclick = () => pdf.pdfResumen(r, hijo, moni); });
+}
+
+/* ---------- Recursos para familias ---------- */
+async function recursos() {
+  const [cats, mats] = await Promise.all([api.categoriasMaterial('familias'), api.materiales({ audiencia: 'familias', estado: 'aprobado' })]);
+  vista.innerHTML = `<h1 class="titulo">Recursos para familias</h1><div class="subtitulo">Videos, guías y lecturas que SHADOW selecciona para acompañarte en casa: crianza, autorregulación, límites, diagnósticos y autonomía.</div><div id="recBib">${htmlBiblioteca(cats, mats, { vacio: 'SHADOW aún no ha publicado recursos. Pronto habrá contenido aquí.' })}</div>`;
+  engancharBiblioteca(document.getElementById('recBib'), mats);
 }
 
 /* ---------- Terapias, especialistas, citas y solicitud de reporte ---------- */

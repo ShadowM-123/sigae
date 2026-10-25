@@ -3,7 +3,8 @@
    auth, storage, rpc) sobre datos en memoria, persistidos en localStorage.
    Se activa con ?demo=1. NUNCA contiene datos reales. */
 
-const KEY = 'sigae_demo_db_v7';
+const VER = 8;
+const KEY = 'sigae_demo_db_v' + VER;
 const KEY_SESION = 'sigae_demo_sesion';
 
 /* ---------- utilidades de fechas ---------- */
@@ -190,16 +191,80 @@ function semilla() {
   const accesos_sesion = [];
   for (let off = -30; off <= 0; off++) { [P.m1, P.m2, P.m3].forEach((m, i) => { if ((off + i) % 2 === 0) accesos_sesion.push({ id: uuid(), perfil_id: m, fecha_hora: `${dia(off)}T07:${50 + i}:00`, dispositivo: 'celular' }); }); if (off % 3 === 0) accesos_sesion.push({ id: uuid(), perfil_id: P.f1, fecha_hora: `${dia(off)}T18:30:00`, dispositivo: 'celular' }); }
 
-  return { _ver: 7, _archivos: {}, resumenes: [], eventos, especialistas_estudiante, citas, solicitud_historial, perfiles, familias, familia_tutores, estudiantes, monitoras, asignaciones, catalogos, accesos_sesion, bitacoras, bitacora_banos, bitacora_bloques, bitacora_fotos: [], bitacora_sentir_monitora, bitacora_lecturas, ciclos, objetivos, evaluaciones, pagos, tareas, solicitudes, notificaciones };
+
+  // ---------- Academia SHADOW ----------
+  const cursos = [
+    { id: 'cur-1', titulo: 'Inducción a SHADOW', descripcion: 'Qué es SHADOW, qué es ser monitora educativa y cómo funciona el acompañamiento en la escuela.', orden: 1, obligatorio: true, publicado: true, creado_por: P.dir, creado_en: `${dia(-120)}T10:00:00` },
+    { id: 'cur-2', titulo: 'El acompañamiento en el aula', descripcion: 'Anticipación, apoyos visuales, transiciones y cómo registrar la jornada en la bitácora.', orden: 2, obligatorio: true, publicado: true, creado_por: P.dir, creado_en: `${dia(-90)}T10:00:00` },
+    { id: 'cur-3', titulo: 'Regulación emocional y plan de calma', descripcion: 'Señales tempranas, corregulación y qué hacer antes, durante y después de una crisis.', orden: 3, obligatorio: false, publicado: true, creado_por: P.dir, creado_en: `${dia(-40)}T10:00:00` },
+    { id: 'cur-4', titulo: 'Comunicación con las familias', descripcion: 'En preparación: cómo informar con respeto y claridad.', orden: 4, obligatorio: false, publicado: false, creado_por: P.dir, creado_en: `${dia(-5)}T10:00:00` },
+  ];
+  const lecciones = [
+    { id: 'lec-1a', curso_id: 'cur-1', titulo: 'Bienvenida: qué es SHADOW', tipo: 'video', url: 'https://youtu.be/ejemplo-shadow-1', contenido: 'Video de bienvenida de Dirección (en la demo la liga es de ejemplo).', duracion_min: 8, orden: 1 },
+    { id: 'lec-1b', curso_id: 'cur-1', titulo: 'Ser monitora educativa: el rol y sus límites', tipo: 'texto', contenido: 'La monitora acompaña al estudiante dentro de la escuela para que participe, aprenda y se regule con la mayor autonomía posible.\n\nNo sustituye a la maestra ni a la terapeuta: coordina con ellas. Observa, anticipa, apoya y registra.\n\nCada jornada termina con la bitácora: es la memoria del acompañamiento y lo que la familia recibe cada tarde.', duracion_min: 10, orden: 2 },
+    { id: 'lec-1c', curso_id: 'cur-1', titulo: 'Código de conducta y confidencialidad', tipo: 'enlace', url: 'https://example.org/shadow/codigo-de-conducta', contenido: 'Documento con los acuerdos de trato, puntualidad, uso de fotografías y manejo de información de los estudiantes.', duracion_min: 15, orden: 3 },
+    { id: 'lec-2a', curso_id: 'cur-2', titulo: 'Anticipar transiciones', tipo: 'video', url: 'https://youtu.be/ejemplo-shadow-2', contenido: '', duracion_min: 12, orden: 1 },
+    { id: 'lec-2b', curso_id: 'cur-2', titulo: 'Apoyos visuales en el salón', tipo: 'video', url: 'https://youtu.be/ejemplo-shadow-3', contenido: '', duracion_min: 9, orden: 2 },
+    { id: 'lec-2c', curso_id: 'cur-2', titulo: 'Cómo llenar la bitácora diaria', tipo: 'texto', contenido: 'La bitácora se llena el mismo día, de preferencia al terminar la jornada.\n\nResponde con lo que observaste, no con lo que supones. Si hubo una conducta que requiere seguimiento, describe qué pasó antes, qué hiciste y cómo terminó.\n\nLa sección «¿Cómo me sentí como monitora?» es para ti y para Dirección: nadie más la ve.', duracion_min: 10, orden: 3 },
+    { id: 'lec-3a', curso_id: 'cur-3', titulo: 'Señales tempranas de desregulación', tipo: 'video', url: 'https://youtu.be/ejemplo-shadow-4', contenido: '', duracion_min: 14, orden: 1 },
+    { id: 'lec-3b', curso_id: 'cur-3', titulo: 'Plan de calma: antes, durante y después', tipo: 'texto', contenido: 'Antes: reconoce las señales y baja la demanda.\nDurante: seguridad primero, pocas palabras, presencia tranquila.\nDespués: recuperación, reparación si hace falta, y registro en la bitácora.', duracion_min: 12, orden: 2 },
+  ];
+  const cuestionarios = [
+    { id: 'q-1', curso_id: 'cur-1', titulo: 'Evaluación de la inducción', minimo_aprobatorio: 80, preguntas: [
+      { texto: '¿Cuál es el papel principal de la monitora educativa?', opciones: ['Sustituir a la maestra titular', 'Acompañar al estudiante para que participe y se regule con autonomía', 'Dar terapia dentro del salón'], correcta: 1 },
+      { texto: '¿Cuándo se llena la bitácora diaria?', opciones: ['El mismo día, al terminar la jornada', 'Al final de la semana', 'Solo si pasó algo relevante'], correcta: 0 },
+      { texto: '¿Quién ve la sección «¿Cómo me sentí como monitora?»?', opciones: ['La familia y la escuela', 'Solo Dirección', 'Todo el equipo'], correcta: 1 },
+      { texto: '¿Se pueden tomar fotos del estudiante?', opciones: ['Siempre', 'Solo si la familia lo autorizó y para la bitácora', 'Nunca'], correcta: 1 },
+    ] },
+    { id: 'q-2', curso_id: 'cur-2', titulo: 'Evaluación del módulo', minimo_aprobatorio: 80, preguntas: [
+      { texto: 'Anticipar una transición significa…', opciones: ['Avisar con tiempo y con apoyo visual qué viene después', 'Cambiar de actividad sin aviso para que se acostumbre', 'Esperar a que el estudiante lo pida'], correcta: 0 },
+      { texto: 'Si hubo una conducta que requiere seguimiento, en la bitácora describes…', opciones: ['Solo que ocurrió', 'Qué pasó antes, qué hiciste y cómo terminó', 'La opinión de la maestra'], correcta: 1 },
+      { texto: 'Los bloques de 30 minutos de la bitácora sirven para…', opciones: ['Calificar al estudiante', 'Ver en qué momentos del día trabaja y en cuáles necesita apoyo', 'Controlar a la monitora'], correcta: 1 },
+    ] },
+    { id: 'q-3', curso_id: 'cur-3', titulo: 'Evaluación del módulo', minimo_aprobatorio: 80, preguntas: [
+      { texto: 'Durante una crisis, lo primero es…', opciones: ['Explicar largamente lo que hizo mal', 'La seguridad, pocas palabras y presencia tranquila', 'Llamar a la familia'], correcta: 1 },
+      { texto: 'La corregulación es…', opciones: ['Que el adulto se regule primero para ayudar al niño a regularse', 'Dejar al niño solo hasta que se calme', 'Un castigo'], correcta: 0 },
+    ] },
+  ];
+  const progreso_lecciones = [];
+  const vio = (perfil, lec, off) => progreso_lecciones.push({ perfil_id: perfil, leccion_id: lec, completada_en: `${dia(off)}T17:${String(10 + progreso_lecciones.length % 40).padStart(2, '0')}:00`, veces_vista: 1 });
+  ['lec-1a','lec-1b','lec-1c','lec-2a','lec-2b','lec-2c','lec-3a'].forEach((l, i) => vio(P.m1, l, -60 + i * 6));
+  ['lec-1a','lec-1b','lec-1c','lec-2a'].forEach((l, i) => vio(P.m2, l, -45 + i * 7));
+  ['lec-1a'].forEach((l, i) => vio(P.m3, l, -20));
+  const intentos_cuestionario = [
+    { id: uuid(), perfil_id: P.m1, cuestionario_id: 'q-1', respuestas: [1,0,1,1], aciertos: 4, total: 4, porcentaje: 100, aprobado: true, fecha: `${dia(-50)}T18:02:00` },
+    { id: uuid(), perfil_id: P.m1, cuestionario_id: 'q-2', respuestas: [0,1,1], aciertos: 3, total: 3, porcentaje: 100, aprobado: true, fecha: `${dia(-30)}T18:20:00` },
+    { id: uuid(), perfil_id: P.m2, cuestionario_id: 'q-1', respuestas: [1,1,1,1], aciertos: 3, total: 4, porcentaje: 75, aprobado: false, fecha: `${dia(-28)}T19:05:00` },
+    { id: uuid(), perfil_id: P.m2, cuestionario_id: 'q-1', respuestas: [1,0,1,1], aciertos: 4, total: 4, porcentaje: 100, aprobado: true, fecha: `${dia(-27)}T08:10:00` },
+  ];
+  // ---------- Materiales y recursos ----------
+  const categorias_material = [
+    { id: 'cm-1', nombre: 'Guías de intervención', audiencia: 'monitoras', orden: 1, activo: true }, { id: 'cm-2', nombre: 'Apoyos visuales', audiencia: 'monitoras', orden: 2, activo: true }, { id: 'cm-3', nombre: 'Formatos y herramientas', audiencia: 'monitoras', orden: 3, activo: true }, { id: 'cm-4', nombre: 'Lecturas y artículos', audiencia: 'monitoras', orden: 4, activo: true },
+    { id: 'cf-1', nombre: 'Crianza y límites', audiencia: 'familias', orden: 1, activo: true }, { id: 'cf-2', nombre: 'Autorregulación y corregulación', audiencia: 'familias', orden: 2, activo: true }, { id: 'cf-3', nombre: 'Entender los diagnósticos', audiencia: 'familias', orden: 3, activo: true }, { id: 'cf-4', nombre: 'Autonomía y habilidades sociales', audiencia: 'familias', orden: 4, activo: true },
+  ];
+  const materiales = [
+    { id: 'mat-1', categoria_id: 'cm-1', titulo: 'Guía: anticipación de transiciones en primaria', descripcion: 'Pasos y frases modelo para anticipar cambios de actividad.', tipo: 'enlace', url: 'https://example.org/shadow/guia-transiciones', audiencia: 'monitoras', estado: 'aprobado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-80)}T10:00:00`, creado_en: `${dia(-80)}T10:00:00` },
+    { id: 'mat-2', categoria_id: 'cm-2', titulo: 'Tablero visual «Primero / Después»', descripcion: 'Plantilla imprimible con pictogramas.', tipo: 'enlace', url: 'https://example.org/shadow/primero-despues.pdf', audiencia: 'monitoras', estado: 'aprobado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-70)}T10:00:00`, creado_en: `${dia(-70)}T10:00:00` },
+    { id: 'mat-3', categoria_id: 'cm-3', titulo: 'Formato de registro de conducta (antecedente-conducta-consecuencia)', descripcion: 'Para situaciones que requieren un registro más fino que la bitácora.', tipo: 'enlace', url: 'https://example.org/shadow/formato-abc.pdf', audiencia: 'monitoras', estado: 'aprobado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-65)}T10:00:00`, creado_en: `${dia(-65)}T10:00:00` },
+    { id: 'mat-4', categoria_id: 'cm-4', titulo: 'Video: integración sensorial en el aula', descripcion: 'Charla de 20 minutos (liga de ejemplo en la demo).', tipo: 'video', url: 'https://youtu.be/ejemplo-material-1', audiencia: 'monitoras', estado: 'aprobado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-30)}T10:00:00`, creado_en: `${dia(-30)}T10:00:00` },
+    { id: 'mat-5', categoria_id: 'cm-2', titulo: 'Semáforo de emociones para el escritorio', descripcion: 'Lo uso con Santiago; funciona muy bien para que avise antes de frustrarse.', tipo: 'enlace', url: 'https://example.org/propuesta/semaforo.pdf', audiencia: 'monitoras', estado: 'propuesto', subido_por: P.m1, aprobado_por: null, aprobado_en: null, creado_en: `${dia(-2)}T16:40:00` },
+    { id: 'mat-6', categoria_id: 'cm-4', titulo: 'Artículo: el papel de la maestra sombra (2018)', descripcion: 'Versión antigua; se sustituyó por la guía de 2026.', tipo: 'enlace', url: 'https://example.org/shadow/articulo-2018', audiencia: 'monitoras', estado: 'retirado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-200)}T10:00:00`, creado_en: `${dia(-200)}T10:00:00` },
+    { id: 'mat-7', categoria_id: 'cf-1', titulo: 'Poner límites con calma: 5 ideas para casa', descripcion: 'Guía breve para madres, padres y cuidadores.', tipo: 'enlace', url: 'https://example.org/shadow/limites-con-calma', audiencia: 'familias', estado: 'aprobado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-50)}T10:00:00`, creado_en: `${dia(-50)}T10:00:00` },
+    { id: 'mat-8', categoria_id: 'cf-2', titulo: 'Video: corregulación, regularnos para ayudarles a regularse', descripcion: '12 minutos (liga de ejemplo en la demo).', tipo: 'video', url: 'https://youtu.be/ejemplo-familias-1', audiencia: 'familias', estado: 'aprobado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-40)}T10:00:00`, creado_en: `${dia(-40)}T10:00:00` },
+    { id: 'mat-9', categoria_id: 'cf-3', titulo: 'TEA, TDAH y síndrome de Down: lo que ayuda en casa', descripcion: 'Una hoja por diagnóstico con orientaciones prácticas.', tipo: 'enlace', url: 'https://example.org/shadow/diagnosticos-en-casa.pdf', audiencia: 'familias', estado: 'aprobado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-35)}T10:00:00`, creado_en: `${dia(-35)}T10:00:00` },
+    { id: 'mat-10', categoria_id: 'cf-4', titulo: 'Rutinas visuales para la mañana y la noche', descripcion: 'Plantillas para imprimir.', tipo: 'enlace', url: 'https://example.org/shadow/rutinas-visuales.pdf', audiencia: 'familias', estado: 'aprobado', subido_por: P.dir, aprobado_por: P.dir, aprobado_en: `${dia(-20)}T10:00:00`, creado_en: `${dia(-20)}T10:00:00` },
+  ];
+  catalogos.push({ id: 'cat-tipo_material-documento', tipo: 'tipo_material', clave: 'documento', etiqueta: 'Documento (PDF, Word, presentación)', orden: 1, activo: true }, { id: 'cat-tipo_material-video', tipo: 'tipo_material', clave: 'video', etiqueta: 'Video (YouTube no listado o Vimeo)', orden: 2, activo: true }, { id: 'cat-tipo_material-enlace', tipo: 'tipo_material', clave: 'enlace', etiqueta: 'Enlace externo', orden: 3, activo: true }, { id: 'cat-tipo_material-imagen', tipo: 'tipo_material', clave: 'imagen', etiqueta: 'Imagen o apoyo visual', orden: 4, activo: true });
+  return { _ver: VER, cursos, lecciones, cuestionarios, progreso_lecciones, intentos_cuestionario, categorias_material, materiales, _archivos: {}, resumenes: [], eventos, especialistas_estudiante, citas, solicitud_historial, perfiles, familias, familia_tutores, estudiantes, monitoras, asignaciones, catalogos, accesos_sesion, bitacoras, bitacora_banos, bitacora_bloques, bitacora_fotos: [], bitacora_sentir_monitora, bitacora_lecturas, ciclos, objetivos, evaluaciones, pagos, tareas, solicitudes, notificaciones };
 }
 
 /* ---------- motor ---------- */
 let DB = cargar();
-function cargar() { try { const s = localStorage.getItem(KEY); if (s) { const o = JSON.parse(s); if (o && o._ver === 6) return o; } } catch (e) {} const d = semilla(); guardar(d); return d; }
+function cargar() { try { const s = localStorage.getItem(KEY); if (s) { const o = JSON.parse(s); if (o && o._ver === VER) return o; } } catch (e) {} const d = semilla(); guardar(d); return d; }
 function guardar(d) { try { localStorage.setItem(KEY, JSON.stringify(d || DB)); } catch (e) { console.warn('No se pudo guardar la base falsa', e); } }
 export function reiniciarBaseFalsa() { localStorage.removeItem(KEY); DB = cargar(); }
 
-const PK = { monitoras: ['perfil_id'], familia_tutores: ['familia_id', 'perfil_id'], bitacora_sentir_monitora: ['bitacora_id'], bitacora_lecturas: ['bitacora_id', 'perfil_id'] };
+const PK = { monitoras: ['perfil_id'], familia_tutores: ['familia_id', 'perfil_id'], bitacora_sentir_monitora: ['bitacora_id'], bitacora_lecturas: ['bitacora_id', 'perfil_id'], progreso_lecciones: ['perfil_id', 'leccion_id'] };
 
 class Consulta {
   constructor(tabla) { this.t = tabla; this.filtros = []; this.ordenes = []; this.lim = null; this.modo = 'select'; this.payload = null; this.unico = null; this.conflicto = null; this.cols = '*'; }
@@ -273,7 +338,7 @@ const auth = {
 /* ---------- storage falso ---------- */
 function reducirImagen(file, max = 900, calidad = 0.72) {
   return new Promise(res => {
-    if (!file.type || !file.type.startsWith('image/')) { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(file); return; }
+    if (!file.type || !file.type.startsWith('image/')) { if (file.size > 1.5 * 1024 * 1024) { res(null); return; } const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(file); return; }
     const img = new Image(); const url = URL.createObjectURL(file);
     img.onload = () => { const esc = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * esc); c.height = Math.round(img.height * esc); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', calidad)); };
     img.onerror = () => res(null); img.src = url;
@@ -282,7 +347,7 @@ function reducirImagen(file, max = 900, calidad = 0.72) {
 const storage = {
   from(bucket) {
     return {
-      async upload(path, file) { const data = await reducirImagen(file); if (!data) return { data: null, error: { message: 'No se pudo leer el archivo' } }; DB._archivos[bucket + '/' + path] = data; guardar(); return { data: { path }, error: null }; },
+      async upload(path, file) { const data = await reducirImagen(file); if (!data) return { data: null, error: { message: 'En la demo los archivos que no son imagen deben pesar menos de 1.5 MB (en producción el límite es 25 MB).' } }; DB._archivos[bucket + '/' + path] = data; guardar(); return { data: { path }, error: null }; },
       async createSignedUrl(path, _seg) { const d = DB._archivos[bucket + '/' + path]; return d ? { data: { signedUrl: d }, error: null } : { data: null, error: { message: 'No existe el archivo' } }; },
       async createSignedUrls(paths) { return { data: paths.map(p => ({ path: p, signedUrl: DB._archivos[bucket + '/' + p] || null })), error: null }; },
       getPublicUrl(path) { return { data: { publicUrl: DB._archivos[bucket + '/' + path] || '' } }; },

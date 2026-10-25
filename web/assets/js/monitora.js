@@ -9,6 +9,7 @@ import { avisosMonitora, pintarAvisos } from './avisos.js';
 import { elegirPeriodo, descargarCompendio } from './direccion-d.js';
 import { htmlResumen, tagResumen, nombrePeriodo, generar } from './resumen.js';
 import { comparativo, htmlComparativo, htmlObjetivos } from './evaluacion.js';
+import * as MF from './monitora-f.js';
 import * as pdf from './pdf.js';
 
 const perfil = await exigir(['monitora']);
@@ -20,11 +21,12 @@ let estSel = estudiantes.find(e => e.id === q.get('est')) || estudiantes[0] || n
 
 const TABS = [
   { id: 'inicio', ic: '⌂', tx: 'Inicio' }, { id: 'bitacora', ic: '✎', tx: 'Bitácora' }, { id: 'estudiante', ic: '☺', tx: 'Mi estudiante' }, { id: 'misbit', ic: '☰', tx: 'Mis bitácoras' }, { id: 'calendario', ic: '📅', tx: 'Calendario' },
-  { id: 'academia', ic: '▶', tx: 'Academia', pronto: true }, { id: 'materiales', ic: '▤', tx: 'Materiales', pronto: true },
+  { id: 'academia', ic: '▶', tx: 'Academia' }, { id: 'materiales', ic: '▤', tx: 'Materiales' },
 ];
 const { pintar: pintarTabs } = marco({ perfil, tabs: TABS, activa: q.get('tab') || 'inicio', onTab: ir, subtitulo: 'Monitora educativa' });
 
-async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacora, estudiante: miEstudiante, misbit, calendario }[tab] || inicio)(params); }
+async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacora, estudiante: miEstudiante, misbit, calendario, academia: p => MF.academia(vista, ctxF, p), materiales: () => MF.materiales(vista, ctxF) }[tab] || inicio)(params); }
+const ctxF = { perfil, cat, ir: (t, p) => ir(t, p) };
 
 async function calendario() {
   vista.innerHTML = `<h1 class="titulo">Calendario</h1><div class="subtitulo">Cumpleaños y citas de tu estudiante, evaluaciones programadas, visitas y capacitaciones.</div><div id="calMoni"></div>`;
@@ -78,9 +80,10 @@ async function inicio() {
     <div class="grid g2" style="margin-top:14px">
       <div class="card"><div class="hd"><h3>Avisos</h3></div><div class="bd" id="avisosMoni"><div class="small muted">Calculando…</div></div></div>
       <div class="card"><div class="hd"><h3>Mis entregas</h3></div><div class="bd" id="resumenEntregas"><div class="small muted">Calculando…</div></div></div>
-      <div class="card"><div class="hd"><h3>Academia SHADOW</h3></div><div class="bd"><p class="small muted">Tu avance en capacitaciones y las evaluaciones pendientes aparecerán aquí. Esta sección se construye en un paso posterior.</p></div></div>
+      <div class="card"><div class="hd"><h3>Academia SHADOW</h3></div><div class="bd" id="acadInicio"><div class="small muted">Calculando…</div></div></div>
     </div>`;
   avisosMonitora(perfil.id, estudiantes).then(av => { const el = document.getElementById('avisosMoni'); if (el) el.innerHTML = pintarAvisos(av, { vacio: 'Sin avisos por ahora.' }); });
+  MF.htmlAvanceInicio(perfil.id).then(h => { const el = document.getElementById('acadInicio'); if (!el) return; el.innerHTML = h; el.querySelector('[data-ir]').onclick = () => ir('academia'); });
   vista.querySelectorAll('[data-bit]').forEach(btn => btn.onclick = () => { estSel = estudiantes.find(e => e.id === btn.dataset.bit); ir('bitacora', { fecha: hoy }); });
   vista.querySelectorAll('[data-corr]').forEach(btn => btn.onclick = () => { const [id, f] = btn.dataset.corr.split('|'); estSel = estudiantes.find(e => e.id === id); ir('bitacora', { fecha: f }); });
   // resumen de entregas (30 días)

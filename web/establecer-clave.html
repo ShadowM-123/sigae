@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SIGAE · Crear contraseña</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/sigae.css">
+</head>
+<body>
+<main class="entrada"><div class="caja">
+  <img class="logo-img" src="assets/img/logo-shadow.png" alt="Shadow Monitoras Educativas" onerror="this.onerror=null;this.src='assets/img/logo-shadow.svg'">
+  <h1>Crea tu contraseña</h1>
+  <div class="sub" id="sub">Un momento…</div>
+  <div class="card"><div class="bd">
+    <form id="f" class="form oculto">
+      <div class="f"><label>Nueva contraseña (mínimo 8 caracteres)</label><input id="c1" type="password" minlength="8" autocomplete="new-password" required></div>
+      <div class="f"><label>Repítela</label><input id="c2" type="password" minlength="8" autocomplete="new-password" required></div>
+      <div id="error" class="alerta bad oculto"><span class="tx"></span></div>
+      <button class="btn p g" type="submit" id="btnOk">Guardar y entrar</button>
+    </form>
+    <div id="sinSesion" class="oculto"><p>Este enlace ya no es válido o ya se usó. Pide uno nuevo desde la pantalla de entrada con «¿Olvidaste tu contraseña?».</p><a class="btn" href="index.html">Ir a la entrada</a></div>
+  </div></div>
+</div></main>
+<script type="module">
+import { db, modoDemo, ruta } from './assets/js/supabase.js';
+import { paginaDe } from './assets/js/auth.js';
+const sub = document.getElementById('sub'), f = document.getElementById('f');
+const err = m => { const e = document.getElementById('error'); e.classList.remove('oculto'); e.querySelector('.tx').textContent = m; };
+// supabase-js toma la sesión del enlace (#access_token…type=invite|recovery) al cargar.
+await new Promise(r => setTimeout(r, 400));
+const { data } = await db.auth.getSession();
+if (modoDemo) { sub.textContent = 'En la demo no hay contraseñas: entra desde la pantalla principal.'; document.getElementById('sinSesion').classList.remove('oculto'); }
+else if (!data?.session) { sub.textContent = ''; document.getElementById('sinSesion').classList.remove('oculto'); }
+else {
+  sub.textContent = `Hola. Elige la contraseña con la que entrarás a SIGAE con el correo ${data.session.user.email}.`; f.classList.remove('oculto');
+  f.onsubmit = async e => {
+    e.preventDefault(); const c1 = document.getElementById('c1').value, c2 = document.getElementById('c2').value;
+    if (c1.length < 8) { err('Usa al menos 8 caracteres.'); return; } if (c1 !== c2) { err('Las contraseñas no coinciden.'); return; }
+    const btn = document.getElementById('btnOk'); btn.disabled = true; btn.textContent = 'Guardando…';
+    const { error } = await db.auth.updateUser({ password: c1 });
+    if (error) { err(error.message); btn.disabled = false; btn.textContent = 'Guardar y entrar'; return; }
+    const { data: p } = await db.from('perfiles').select('rol').eq('id', data.session.user.id).maybeSingle();
+    location.replace(ruta(p ? paginaDe(p.rol) : 'index.html'));
+  };
+}
+</script>
+</body>
+</html>

@@ -378,6 +378,8 @@ const auth = {
     localStorage.setItem(KEY_SESION, JSON.stringify({ id: p.id, email: p.correo })); return { data: { user: { id: p.id, email: p.correo } }, error: null };
   },
   async signOut() { localStorage.removeItem(KEY_SESION); return { error: null }; },
+  async updateUser() { return { data: {}, error: null }; },
+  async resetPasswordForEmail() { return { data: {}, error: null }; },
   onAuthStateChange() { return { data: { subscription: { unsubscribe() {} } } }; },
 };
 
@@ -451,6 +453,12 @@ export function crearClienteFalso() {
     esFalso: true,
     from: t => new Consulta(t),
     auth, storage,
+    functions: { async invoke(nombre, { body } = {}) {
+      if (nombre !== 'enviar-correo') return { data: null, error: { message: `Función ${nombre} no existe en la demo` } };
+      if (body?.accion === 'invitar') { const correo = String(body.correo || '').toLowerCase(); let p = DB.perfiles.find(x => (x.correo || '').toLowerCase() === correo); if (!p) { p = { id: 'p-' + uuid().slice(0, 8), rol: body.rol || 'especialista', subtipo_especialista: body.subtipo || null, nombre: body.nombre || correo, correo, activo: true, creado_en: new Date().toISOString() }; DB.perfiles.push(p); guardar(); } return { data: { id: p.id, existia: false, demo: true }, error: null }; }
+      // demo: los correos «se envían» al instante
+      let n = 0; (DB.correos_enviados || []).forEach(c => { if (c.estado === 'pendiente') { c.estado = 'enviado'; c.resend_id = 'demo-' + uuid().slice(0, 8); n++; } }); guardar(); return { data: { enviados: n, errores: 0, demo: true }, error: null };
+    } },
     async rpc(nombre, args = {}) { if (!RPC[nombre]) return { data: null, error: { message: `RPC ${nombre} no existe en la demo` } }; try { return { data: RPC[nombre](args), error: null }; } catch (e) { return { data: null, error: { message: e.message } }; } },
     _db: () => DB,
   };

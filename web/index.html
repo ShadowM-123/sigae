@@ -20,6 +20,7 @@
       <div class="f"><label>Contraseña</label><input id="clave" type="password" autocomplete="current-password" required></div>
       <div id="error" class="alerta bad oculto"><span class="tx"></span></div>
       <button class="btn p g" type="submit">Entrar</button>
+      <button class="btn ghost" type="button" id="btnOlvide" style="width:100%">¿Olvidaste tu contraseña?</button>
     </form>
   </div></div>
   <div id="demo" class="oculto" style="margin-top:16px">
@@ -33,6 +34,8 @@ import { db, modoDemo, ruta } from './assets/js/supabase.js';
 import { paginaDe } from './assets/js/auth.js';
 import { esc, iniciales } from './assets/js/ui.js';
 
+// Enlaces de invitación o recuperación de contraseña (Supabase manda a la Site URL con #access_token…type=invite|recovery)
+if (/type=(invite|recovery|magiclink)/.test(location.hash)) location.replace('establecer-clave.html' + location.search + location.hash);
 const irPorRol = async (uid) => { const { data } = await db.from('perfiles').select('*').eq('id', uid).maybeSingle(); if (!data) { mostrarError('Tu usuario no tiene perfil asignado. Pide a Dirección que lo active.'); return; } location.href = ruta(paginaDe(data.rol)); };
 const mostrarError = m => { const e = document.getElementById('error'); e.classList.remove('oculto'); e.querySelector('.tx').textContent = m; };
 
@@ -46,6 +49,12 @@ document.getElementById('f').onsubmit = async e => {
   irPorRol(data.user.id);
 };
 
+document.getElementById('btnOlvide').onclick = async () => {
+  const correo = document.getElementById('correo').value.trim(); if (!correo) { mostrarError('Escribe tu correo arriba y vuelve a tocar «¿Olvidaste tu contraseña?».'); return; }
+  if (modoDemo) { mostrarError('En la demo no hay contraseñas: elige un usuario abajo.'); return; }
+  const { error } = await db.auth.resetPasswordForEmail(correo, { redirectTo: new URL('establecer-clave.html', location.href).href });
+  mostrarError(error ? error.message : 'Si el correo está registrado, te llegará un enlace para crear una contraseña nueva.');
+};
 if (modoDemo) {
   document.getElementById('demo').classList.remove('oculto');
   document.getElementById('aviso').innerHTML = '<div class="alerta warn" style="margin-bottom:12px"><span class="tx"><b>Versión de demostración.</b> Datos ficticios. Elige un usuario abajo; la contraseña no se valida.</span></div>';

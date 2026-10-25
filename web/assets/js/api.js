@@ -260,3 +260,9 @@ export async function correos({ estado } = {}) { let q = db.from('correos_enviad
 export async function guardarCorreo(c) { return guardarPorId('correos_enviados', c); }
 export async function urlCv(path) { const r = await db.storage.from('curriculums').createSignedUrl(path, 3600); return r.data?.signedUrl || ''; }
 export async function seleccionarPostulante(id) { return ok(await db.rpc('seleccionar_postulante', { p_postulacion: id })); }
+
+/* ---------- paso J: correo e invitaciones (Edge Function enviar-correo) ---------- */
+/** Envía por Resend los correos pendientes. Devuelve { enviados, errores } o { pendientes: true } si falta la llave. */
+export async function enviarCorreosPendientes() { const r = await db.functions.invoke('enviar-correo', { body: {} }); if (r.error) throw new Error(r.error.message || 'No se pudo enviar'); return r.data; }
+/** Invita a una persona a SIGAE (crea su usuario y le manda el enlace para crear contraseña). Devuelve { id, existia }. */
+export async function invitarUsuario({ correo, nombre, rol, subtipo }) { const r = await db.functions.invoke('enviar-correo', { body: { accion: 'invitar', correo, nombre, rol, subtipo } }); if (r.error) throw new Error(r.error.message || 'No se pudo invitar'); if (r.data?.error) throw new Error(r.data.error); return r.data; }

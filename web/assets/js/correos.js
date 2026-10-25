@@ -25,5 +25,7 @@ export function redactar(plantilla, { nombre, folio, enlace, agenda, fecha } = {
 /** Deja el correo en la bandeja de salida (pendiente de Resend). */
 export async function encolar(plantilla, destinatario, datos, relacion) {
   const { asunto, cuerpo } = redactar(plantilla, datos);
-  return api.guardarCorreo({ destinatario, plantilla, asunto, cuerpo, relacion, estado: 'pendiente', fecha: new Date().toISOString() });
+  const fila = await api.guardarCorreo({ destinatario, plantilla, asunto, cuerpo, relacion, estado: 'pendiente', fecha: new Date().toISOString() });
+  try { await api.enviarCorreosPendientes(); } catch (e) { console.warn('Correo en espera (Resend aún no configurado):', e.message); }
+  return fila;
 }

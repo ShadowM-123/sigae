@@ -8,6 +8,7 @@ import { montarCalendario } from './calendario.js';
 import { avisosMonitora, pintarAvisos } from './avisos.js';
 import { elegirPeriodo, descargarCompendio } from './direccion-d.js';
 import { htmlResumen, tagResumen, nombrePeriodo, generar } from './resumen.js';
+import { comparativo, htmlComparativo, htmlObjetivos } from './evaluacion.js';
 import * as pdf from './pdf.js';
 
 const perfil = await exigir(['monitora']);
@@ -120,7 +121,9 @@ async function bitacora(params = {}) {
 async function miEstudiante() {
   if (!estudiantes.length) return inicio();
   const est = estSel || estudiantes[0];
-  const [fam, tutores, objetivos, evaluaciones] = await Promise.all([api.familia(est.familia_id), api.tutoresDe(est.familia_id), api.objetivosDe(est.id), api.evaluacionesDe(est.id)]);
+  const [fam, tutores, objetivosTodos, evaluacionesTodas, ciclo] = await Promise.all([api.familia(est.familia_id), api.tutoresDe(est.familia_id), api.objetivosDe(est.id), api.evaluacionesDe(est.id), api.cicloActivo(est.id)]);
+  const objetivos = objetivosTodos.filter(o => o.visible_monitora && (!ciclo || o.ciclo_id === ciclo.id)); const evaluaciones = evaluacionesTodas.filter(e => e.visible_monitora && (!ciclo || e.ciclo_id === ciclo.id));
+  const cmp = comparativo({ evals: evaluaciones, objetivos, dimensiones: cat.dimension_evaluacion || [] });
   const cumple = proximoCumple(est.fecha_nacimiento);
   const dias = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   vista.innerHTML = `<h1 class="titulo">Mi estudiante</h1>${selectorEst(est)}
@@ -129,11 +132,12 @@ async function miEstudiante() {
     <div class="card"><div class="hd"><h3>Escuela y horario</h3></div><div class="bd"><p><b>${esc(est.escuela)}</b><br>${esc(est.grado)} · grupo ${esc(est.grupo || '—')}<br><span class="muted small">${esc(est.direccion_escuela || '')}</span></p><p>Horario: <b>${horaCorta(est.hora_entrada)} a ${horaCorta(est.hora_salida)}</b>${est.hora_recreo_inicio ? ` · recreo ${horaCorta(est.hora_recreo_inicio)}–${horaCorta(est.hora_recreo_fin)}` : ''}<br>Días: ${(est.dias_asistencia || []).map(d => dias[d]).join(', ')}</p></div></div>
     <div class="card"><div class="hd"><h3>Perfil de desarrollo</h3></div><div class="bd"><p><b>Diagnóstico:</b> ${esc(est.diagnostico || '—')}</p><p>${esc(est.perfil_desarrollo || '')}</p><p><b>Necesidades de apoyo</b></p><div class="chips">${(est.necesidades_apoyo || []).map(n => `<span class="tag">${esc(n)}</span>`).join(' ')}</div></div></div>
     <div class="card"><div class="hd"><h3>Familia</h3></div><div class="bd"><p>${esc(est.dinamica_familiar || '')}</p><ul class="lista">${tutores.map(t => `<li style="padding:8px 0"><span class="ava">${iniciales(t.nombre)}</span><div class="tx"><b>${esc(t.nombre)}</b><div class="m">${esc(t.parentesco || '')} · ${esc(t.telefono || '')}</div></div></li>`).join('')}</ul></div></div>
-    <div class="card"><div class="hd"><h3>Objetivos de acompañamiento</h3></div><div class="bd sin"><ul class="lista">${objetivos.filter(o => o.visible_monitora).map(o => `<li><div class="tx"><b>${esc(o.descripcion)}</b><div class="m">${esc(o.estrategia || '')}</div></div><span class="tag ${o.estado === 'alcanzado' ? 'ok' : o.estado === 'pausado' ? 'gray' : ''}">${{ en_proceso: 'En proceso', alcanzado: 'Alcanzado', pausado: 'Pausado' }[o.estado]}</span></li>`).join('') || '<li class="muted">Sin objetivos registrados.</li>'}</ul></div></div>
-    <div class="card"><div class="hd"><h3>Evaluaciones</h3></div><div class="bd sin"><ul class="lista">${evaluaciones.filter(e => e.visible_monitora).map(e => `<li><div class="tx"><b>${{ diagnostica: 'Diagnóstica', intermedia: 'Intermedia', final: 'Final' }[e.tipo]}</b><div class="m">${e.realizada ? `Aplicada el ${fecha(e.fecha)}${e.observaciones ? ' · ' + esc(e.observaciones) : ''}` : e.fecha ? `Programada para el ${fecha(e.fecha)}` : 'Pendiente de programar'}</div></div>${e.realizada ? '<span class="tag ok">Hecha</span>' : '<span class="tag warn">Pendiente</span>'}</li>`).join('') || '<li class="muted">Sin evaluaciones.</li>'}</ul></div></div>
+    <div class="card"><div class="hd"><h3>Objetivos de acompañamiento</h3><span class="small muted">${esc(ciclo?.nombre || '')}</span></div><div class="bd sin">${htmlObjetivos(objetivos)}</div></div>
+    <div class="card"><div class="hd"><h3>Evaluaciones</h3><div class="sp"></div><button class="btn s" id="evMoniPdf">Descargar PDF</button></div><div class="bd">${htmlComparativo(cmp, { compacto: true })}<div class="small muted" style="margin-top:8px">Solo ves las evaluaciones que Dirección autorizó. Programadas: ${evaluaciones.filter(e => !e.realizada && e.fecha).map(e => `${{ diagnostica: 'diagnóstica', intermedia: 'intermedia', final: 'final' }[e.tipo]} el ${fecha(e.fecha)}`).join(', ') || 'ninguna'}.</div></div></div>
   </div>
   <h3 style="margin:16px 0 8px;font-size:15px">Red de apoyo: terapias, especialistas y citas</h3>${await htmlRedApoyo(est.id, { editable: false })}`;
   vista.querySelector('#selEst')?.addEventListener('change', e => { estSel = estudiantes.find(x => x.id === e.target.value); miEstudiante(); });
+  document.getElementById('evMoniPdf').onclick = () => pdf.pdfEvaluaciones({ est, moni: perfil, ciclo, cmp });
 }
 
 /* ---------- Mis bitácoras ---------- */

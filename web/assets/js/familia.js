@@ -7,6 +7,7 @@ import { htmlRedApoyo, engancharRedApoyo } from './direccion-c.js';
 import { montarCalendario } from './calendario.js';
 import { avisosFamilia, pintarAvisos, ESTADOS_SOL, tagSol } from './avisos.js';
 import { htmlResumen, nombrePeriodo, asegurarAutomaticos } from './resumen.js';
+import { comparativo, htmlComparativo, htmlObjetivos } from './evaluacion.js';
 import * as pdf from './pdf.js';
 import { modoDemo } from './supabase.js';
 
@@ -55,12 +56,20 @@ async function inicio() {
   <div class="grid g2" style="margin-top:12px">
     <div class="card"><div class="hd"><h3>Resumen de la semana</h3><div class="sp"></div><button class="btn s" id="btnResumenes">Ver todos</button></div><div class="bd" id="resumenFam"><div class="small muted">Cargando…</div></div></div>
     <div class="card"><div class="hd"><h3>Avisos</h3></div><div class="bd" id="avisosFam"><div class="small muted">Calculando…</div></div></div>
+    <div class="card" style="grid-column:1/-1"><div class="hd"><h3>Objetivos y avances del ciclo</h3><div class="sp"></div><button class="btn s" id="btnEvalPdf">Descargar PDF</button></div><div class="bd" id="evalFam"><div class="small muted">Cargando…</div></div></div>
     <div class="card"><div class="hd"><h3>Recursos para familias</h3></div><div class="bd"><p class="small muted">Videos y guías sobre crianza, autorregulación, límites y los diagnósticos de nuestros estudiantes. Esta sección se habilita en un paso posterior.</p></div></div>
   </div>`;
   vista.querySelector('#selHijo')?.addEventListener('change', e => { hijo = hijos.find(x => x.id === e.target.value); inicio(); });
   avisosFamilia(perfil.id, hijo).then(av => { const el = document.getElementById('avisosFam'); if (el) el.innerHTML = pintarAvisos(av, { vacio: 'Sin avisos por ahora. Aquí verás recordatorios de pagos, citas y cumpleaños.' }); });
   api.resumenesDe(hijo.id, { soloPublicados: true }).then(rs => { const el = document.getElementById('resumenFam'); if (!el) return; const r = rs[0]; if (!r) { el.innerHTML = '<div class="small muted">Cada semana SHADOW publica aquí un resumen de cómo le fue a tu hijo o hija. Aún no hay uno publicado.</div>'; return; } el.innerHTML = `<div class="small muted" style="margin-bottom:6px">${nombrePeriodo({ tipo: r.tipo, inicio: r.periodo_inicio, fin: r.periodo_fin })}</div><div class="lectura">${htmlResumen(r, { compacto: true })}</div><div class="row" style="margin-top:10px"><button class="btn s" id="btnResPdf">Descargar PDF</button></div>`; document.getElementById('btnResPdf').onclick = () => pdf.pdfResumen(r, hijo, moni); });
   document.getElementById('btnResumenes').onclick = () => ir('bitacoras');
+  Promise.all([api.cicloActivo(hijo.id), api.objetivosDe(hijo.id), api.evaluacionesDe(hijo.id)]).then(([ciclo, objs, evs]) => {
+    const el = document.getElementById('evalFam'); if (!el) return;
+    const objetivos = objs.filter(o => o.visible_familia && (!ciclo || o.ciclo_id === ciclo.id)); const evals = evs.filter(e => e.visible_familia && (!ciclo || e.ciclo_id === ciclo.id));
+    const cmp = comparativo({ evals, objetivos, dimensiones: cat.dimension_evaluacion || [] });
+    el.innerHTML = `<div class="small muted" style="margin-bottom:8px">${esc(ciclo?.nombre || '')} · Lo que SHADOW trabaja con ${esc(nombreCorto(hijo.nombre))} y cómo van las evaluaciones que Dirección compartió contigo. Las observaciones profesionales se platican en persona.</div><div class="grid g2"><div>${htmlObjetivos(objetivos)}</div><div>${htmlComparativo(cmp, { compacto: true, observaciones: false })}</div></div>`;
+    document.getElementById('btnEvalPdf').onclick = () => pdf.pdfEvaluaciones({ est: hijo, moni, ciclo, cmp, paraFamilia: true });
+  });
   document.getElementById('btnPagos').onclick = async () => { const ps = await api.pagosDe(hijo.familia.id); modal('Historial de pagos', `<table><thead><tr><th>Vence</th><th>Monto</th><th>Estado</th></tr></thead><tbody>${ps.slice().reverse().map(p => `<tr><td class="mono">${fecha(p.fecha_vencimiento)}</td><td class="mono">${dinero(p.monto)}</td><td>${p.estado === 'pagado' ? `<span class="tag ok">Pagado${p.pagado_en ? ' ' + fecha(p.pagado_en) : ''}</span>` : (p.estado === 'vencido' || p.fecha_vencimiento < hoy) ? '<span class="tag bad">Pendiente · vencido</span>' : '<span class="tag warn">Pendiente</span>'}</td></tr>`).join('') || '<tr><td colspan="3" class="vacio">Sin pagos registrados.</td></tr>'}</tbody></table><div class="small muted" style="margin-top:10px">Los pagos los registra SHADOW. Si ya pagaste y aún aparece pendiente, avísanos.</div>`); };
 
   const pintarBit = async () => {

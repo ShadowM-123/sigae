@@ -3,6 +3,7 @@
 import * as api from './api.js';
 import { renderLectura } from './bitacora.js';
 import { htmlResumen, SECCIONES, nombrePeriodo } from './resumen.js';
+import { TIPOS, htmlComparativo, htmlObjetivos } from './evaluacion.js';
 import { esc, fecha, fechaLarga, hora, horaCorta, nombreCorto, edadTexto, toast } from './ui.js';
 
 const CSS_DOC = `
@@ -68,4 +69,13 @@ export async function pdfCompendio({ est, moni, periodo, resumen, cat }) {
 /** Solo el resumen (una hoja). */
 export function pdfResumen(r, est, moni) {
   abrir(`Resumen ${r.tipo} · ${nombreCorto(est.nombre)}`, `${meta(est, moni, [['Periodo', `${fecha(r.periodo_inicio)} – ${fecha(r.periodo_fin)}`]])}<div class="doc-sec">${htmlResumen(r)}</div>`);
+}
+
+/** Evaluaciones y objetivos del ciclo (comparativo). `paraFamilia` omite observaciones profesionales y notas internas. */
+export function pdfEvaluaciones({ est, moni, ciclo, cmp, paraFamilia = false }) {
+  const objs = cmp.objs.filter(o => !paraFamilia || o.visible_familia);
+  abrir(`Evaluaciones del ciclo · ${nombreCorto(est.nombre)}`, `${meta(est, moni, [['Ciclo', esc(ciclo?.nombre || '—')], ['Evaluaciones aplicadas', cmp.hechas.map(ev => `${TIPOS[ev.tipo]} ${fecha(ev.fecha)}`).join(' · ') || 'ninguna']])}
+    <div class="doc-sec"><h2>Comparativo por dimensión <small>escala 1 = con apoyo constante · 5 = de forma autónoma</small></h2>${htmlComparativo(cmp, { observaciones: !paraFamilia })}</div>
+    <div class="doc-sec"><h2>Objetivos de acompañamiento</h2>${htmlObjetivos(objs)}</div>
+    ${paraFamilia ? '<div class="doc-aviso">Este documento muestra los niveles y los objetivos. Las observaciones profesionales se comentan en persona con Dirección de SHADOW.</div>' : '<div class="doc-aviso">Los cambios entre evaluaciones son observaciones del equipo, no un diagnóstico. Se interpretan junto con las bitácoras y la valoración profesional.</div>'}`);
 }

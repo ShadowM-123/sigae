@@ -5,6 +5,7 @@ import { marco, esc, fecha, fechaLarga, hora, horaCorta, hoyIso, sumarDias, dias
 import { renderLectura, porcentajeAvance } from './bitacora.js';
 import * as C from './direccion-c.js';
 import * as D from './direccion-d.js';
+import * as E from './direccion-e.js';
 import * as pdf from './pdf.js';
 import { avisosDireccion, pintarAvisos } from './avisos.js';
 import { modoDemo } from './supabase.js';
@@ -15,16 +16,16 @@ const vista = document.getElementById('vista');
 const hoy = hoyIso();
 // Simula la tarea programada de los lunes y del día 1: borradores de resumen para todos (en demo, publica uno para que la familia lo vea).
 try { if (!sessionStorage.getItem('sigae_cron_resumenes')) { await D.asegurarAutomaticos(cat, { publicarDemo: modoDemo }); sessionStorage.setItem('sigae_cron_resumenes', '1'); } } catch (e) { console.warn(e); }
-const ctx = { perfil, cat, verEstudiante: id => verEstudiante(id), verFamilia: id => C.verFamilia(id, ctx, () => {}), nuevaTarea: al => nuevaTarea(al) };
+const ctx = { perfil, cat, ir: (t, p) => ir(t, p), verEstudiante: id => verEstudiante(id), verFamilia: id => C.verFamilia(id, ctx, () => {}), nuevaTarea: al => nuevaTarea(al) };
 
 const TABS = [
   { grupo: 'Operación' }, { id: 'inicio', ic: '▦', tx: 'Inicio' }, { id: 'pendientes', ic: '☑', tx: 'Pendientes' }, { id: 'calendario', ic: '📅', tx: 'Calendario' }, { id: 'bitacoras', ic: '✎', tx: 'Bitácoras' }, { id: 'estudiantes', ic: '☺', tx: 'Estudiantes' }, { id: 'monitoras', ic: '✦', tx: 'Monitoras' }, { id: 'familias', ic: '⌂', tx: 'Familias' },
-  { grupo: 'Seguimiento' }, { id: 'resumenes', ic: '▤', tx: 'Resúmenes' }, { id: 'evaluaciones', ic: '◔', tx: 'Evaluaciones', pronto: true }, { id: 'indicadores', ic: '↗', tx: 'Indicadores', pronto: true },
+  { grupo: 'Seguimiento' }, { id: 'resumenes', ic: '▤', tx: 'Resúmenes' }, { id: 'evaluaciones', ic: '◔', tx: 'Evaluaciones' }, { id: 'indicadores', ic: '↗', tx: 'Indicadores' },
   { grupo: 'Equipo y red' }, { id: 'academia', ic: '▶', tx: 'Academia', pronto: true }, { id: 'materiales', ic: '▤', tx: 'Materiales', pronto: true }, { id: 'especialistas', ic: '✚', tx: 'Especialistas', pronto: true }, { id: 'reclutamiento', ic: '⇄', tx: 'Reclutamiento', pronto: true },
   { grupo: 'Configuración' }, { id: 'catalogos', ic: '☰', tx: 'Catálogos' },
 ];
 const { pintar: pintarTabs } = marco({ perfil, tabs: TABS, activa: 'inicio', onTab: ir, subtitulo: 'Dirección' });
-async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx), resumenes: () => D.resumenes(vista, ctx) }[tab] || inicio)(params); }
+async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx), resumenes: () => D.resumenes(vista, ctx), evaluaciones: p => E.evaluaciones(vista, ctx, p), indicadores: () => E.indicadores(vista, ctx) }[tab] || inicio)(params); }
 
 function nuevaTarea(alGuardar) {
   api.panoramaEstudiantes().then(pan => {
@@ -83,7 +84,7 @@ async function inicio() {
         ${filas.map(({ e, b, estado }) => `<div class="fila ${estado}"><div><b>${esc(nombreCorto(e.nombre))}</b> <span class="muted small">· ${esc(nombreCorto(e.monitora?.nombre || ''))}</span><div class="small">${estado === 'ok' ? `Entregada a las ${hora(b.enviada_en)} · valoración ${b.valoracion_dia}/5${b.revisada_en ? ' · revisada' : ''}` : estado === 'bor' ? `En borrador · ${porcentajeAvance(b)} % completo` : estado === 'nohay' ? 'Sin jornada escolar hoy' : 'Sin entregar'}</div></div>
           <div class="row" style="gap:6px">${estado === 'ok' ? `<button class="btn s" data-ver="${b.id}">Ver</button>` : estado === 'nohay' ? '' : `<button class="btn s" data-recordar="${e.monitora?.id}">Recordar</button>`}</div></div>`).join('') || '<div class="vacio">No hay estudiantes con monitora asignada.</div>'}
       </div></div>
-      <div class="card"><div class="hd"><h3>Evaluaciones</h3><div class="sp"></div><span class="small muted">D = diagnóstica · I = intermedia · F = final</span></div><div class="bd sin"><ul class="lista">${pan.map(e => `<li><div class="tx"><b>${esc(nombreCorto(e.nombre))}</b><div class="m" style="margin-top:4px">${evalPorEst(e)}</div></div></li>`).join('')}</ul></div></div>
+      <div class="card"><div class="hd"><h3>Evaluaciones</h3><div class="sp"></div><span class="small muted">D = diagnóstica · I = intermedia · F = final</span><button class="btn s ghost" data-ir="evaluaciones">Abrir</button></div><div class="bd sin"><ul class="lista">${pan.map(e => `<li class="click" data-eval="${e.id}"><div class="tx"><b>${esc(nombreCorto(e.nombre))}</b><div class="m" style="margin-top:4px">${evalPorEst(e)}</div></div></li>`).join('')}</ul></div></div>
     </div>
     <div class="col" style="gap:14px">
       <div class="card"><div class="hd"><h3>Avisos y recordatorios</h3><div class="sp"></div><span class="small muted">Se generan solos cada día</span></div><div class="bd" id="avisosDir"><div class="small muted">Calculando…</div></div></div>
@@ -101,6 +102,8 @@ async function inicio() {
   vista.querySelectorAll('[data-tarea]').forEach(c => c.onchange = async () => { await api.guardarTarea({ id: c.dataset.tarea, estado: 'hecha' }); toast('Tarea hecha'); inicio(); });
   vista.querySelectorAll('[data-sol]').forEach(li => li.onclick = () => C.verSolicitud(li.dataset.sol, ctx, inicio));
   vista.querySelector('[data-ir="pendientes"]').onclick = () => ir('pendientes');
+  vista.querySelector('[data-ir="evaluaciones"]').onclick = () => ir('evaluaciones');
+  vista.querySelectorAll('[data-eval]').forEach(li => li.onclick = () => ir('evaluaciones', { id: li.dataset.eval }));
   document.getElementById('btnTarea').onclick = () => nuevaTarea(inicio);
   avisosDireccion().then(av => { const el = document.getElementById('avisosDir'); if (el) el.innerHTML = pintarAvisos(av, { vacio: 'Sin avisos para hoy.' }); });
 }
@@ -155,14 +158,14 @@ async function verEstudiante(id) {
         ${asigs.filter(a => !a.activa).length ? `<div class="small muted" style="margin-top:8px"><b>Historial:</b><br>${asigs.filter(a => !a.activa).map(a => `${esc(nombreCorto(monis.find(m => m.id === a.monitora_id)?.nombre || ''))} · ${fecha(a.fecha_inicio)} → ${fecha(a.fecha_fin)}${a.motivo_cambio ? ' · ' + esc(a.motivo_cambio) : ''}`).join('<br>')}</div>` : ''}</div></div>
       <div class="card"><div class="hd"><h3>Familia</h3></div><div class="bd"><b>${esc(fam?.nombre_familia || '—')}</b><div class="small">${tutores.map(t => `${esc(t.nombre)} (${esc(t.parentesco || '')}) · ${esc(t.telefono || '')}`).join('<br>')}</div><div class="small muted" style="margin-top:6px">${esc(e.dinamica_familiar || '')}</div><div class="small muted">Compañeros en el salón: ${e.companeros_salon ?? '—'}</div></div></div>
       <div class="card"><div class="hd"><h3>Perfil de desarrollo</h3></div><div class="bd small"><b>${esc(e.diagnostico || '')}</b><p>${esc(e.perfil_desarrollo || '')}</p>${(e.necesidades_apoyo || []).map(n => `<span class="tag gray">${esc(n)}</span> `).join('')}</div></div>
-      <div class="card"><div class="hd"><h3>Objetivos</h3></div><div class="bd sin"><ul class="lista">${objetivos.map(o => `<li style="padding:8px 14px"><div class="tx"><b>${esc(o.descripcion)}</b><div class="m">${esc(o.estrategia || '')}</div></div><span class="tag ${o.estado === 'alcanzado' ? 'ok' : ''}">${{ en_proceso: 'En proceso', alcanzado: 'Alcanzado', pausado: 'Pausado' }[o.estado]}</span></li>`).join('') || '<li class="vacio">Sin objetivos.</li>'}</ul></div></div>
-      <div class="card"><div class="hd"><h3>Evaluaciones</h3></div><div class="bd sin"><ul class="lista">${evals.map(ev => `<li style="padding:8px 14px"><div class="tx"><b>${TIPO_EVAL[ev.tipo]}</b><div class="m">${ev.realizada ? `Aplicada el ${fecha(ev.fecha)}` : ev.fecha ? `Programada ${fecha(ev.fecha)}${ev.fecha < hoy ? ' · <span class="tag bad">vencida</span>' : ''}` : 'Por programar'}${ev.observaciones ? ' · ' + esc(ev.observaciones) : ''}</div></div>${ev.realizada ? '<span class="tag ok">Hecha</span>' : '<span class="tag warn">Pendiente</span>'}</li>`).join('') || '<li class="vacio">Sin evaluaciones.</li>'}</ul></div></div>
+      <div class="full" style="grid-column:1/-1">${await E.htmlEvaluacionesEstudiante(id, cat)}</div>
       <div class="card"><div class="hd"><h3>Últimas bitácoras</h3><div class="sp"></div><button class="btn s" id="eDesc">Descargar semana / mes</button></div><div class="bd sin"><ul class="lista">${bs.map(b => `<li class="click" data-bit="${b.id}" style="padding:8px 14px"><div class="tx"><b>${fecha(b.fecha_jornada)}</b><div class="m">${b.valoracion_dia ? b.valoracion_dia + '/5 · ' : ''}${esc((b.resumen_narrativo || '').slice(0, 70))}</div></div>${estadoBitacora(b.estado)}</li>`).join('') || '<li class="vacio">Sin bitácoras.</li>'}</ul></div></div>
     </div>
     <div style="margin-top:12px">${await D.htmlResumenesEstudiante(id)}</div>
     <h4 style="margin:14px 0 8px">Red de apoyo: terapias, especialistas y citas</h4>${await C.htmlRedApoyo(id, { editable: true, prefijo: 'ra' })}`, `<button class="btn" data-cerrar>Cerrar</button><button class="btn" id="eEditar">Editar expediente</button>`);
   C.engancharRedApoyo(document.getElementById('modal'), id, perfil.id, () => verEstudiante(id), { prefijo: 'ra' });
   D.engancharResumenesEstudiante(document.getElementById('modal'), { ...e, monitora: moni }, ctx, () => verEstudiante(id));
+  document.querySelector('[data-abrir-eval]').onclick = () => { cerrarModal(); ir('evaluaciones', { id }); };
   document.getElementById('eEditar').onclick = () => editarEstudiante(e);
   document.getElementById('eDesc').onclick = () => D.elegirPeriodo(`Descargar compendio de ${nombreCorto(e.nombre)}`, p => D.descargarCompendio(e, p, cat));
   document.querySelectorAll('[data-bit]').forEach(li => li.onclick = () => { const b = bs.find(x => x.id === li.dataset.bit); verBitacora(b, e, monis.find(m => m.id === b.monitora_id), () => verEstudiante(id)); });

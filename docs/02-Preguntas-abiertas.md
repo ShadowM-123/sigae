@@ -16,7 +16,7 @@ Lo que el documento de experiencias de usuario deja por definir y solo SHADOW pu
 ## Expediente y evaluaciones
 | # | Pregunta | Supuesto |
 |---|---|---|
-| 8 | ¿Qué **dimensiones** se califican en la evaluación diagnóstica, intermedia y final, y con qué escala? ¿Tienen un formato actual? | Catálogo editable; escala 1–5. Si mandan su formato, se replica. |
+| 8 | ¿Qué **dimensiones** se califican en la evaluación diagnóstica, intermedia y final, y con qué escala? ¿Tienen un formato actual? | Catálogo editable `dimension_evaluacion` (atención y permanencia, autonomía, comunicación, regulación emocional, interacción social, desempeño académico); escala 1–5 de **nivel de apoyo** (1 con apoyo constante · 5 de forma autónoma). Si mandan su formato, se replica. |
 | 9 | ¿Qué partes del expediente y de las evaluaciones **ve la monitora** y cuáles **ve la familia**? | Monitora: todo salvo datos administrativos y de pago. Familia: resumen de objetivos y evaluaciones, no las observaciones internas. |
 | 10 | ¿Un estudiante puede tener **más de una monitora** (por ejemplo, turnos distintos)? | Una activa a la vez. |
 | 11 | ¿Qué es un «ciclo» para SHADOW: ciclo escolar, semestre, o periodo por contrato? | Ciclo escolar. |

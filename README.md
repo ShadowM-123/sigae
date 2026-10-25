@@ -3,7 +3,7 @@
 Plataforma de **SHADOW Monitoras Educativas** para operar el acompañamiento de estudiantes en la escuela: bitácoras diarias, expedientes, evaluaciones, familias, monitoras, Academia, materiales, especialistas y reclutamiento.
 
 ## Estado
-Arquitectura v1 cerrada y pasos A a D construidos (24-oct-2026): núcleo, bitácora diaria en celular, portal de la familia, panel de Dirección, calendario, pagos por familia, pendientes y solicitudes, red de apoyo, avisos, resúmenes semanales y mensuales generados desde las bitácoras y descargas en PDF (diaria, semanal, mensual) sin la sección confidencial. Todo contra la base falsa. No está en producción.
+Arquitectura v1 cerrada y pasos A a E construidos (24 y 25-oct-2026): núcleo, bitácora diaria en celular, portal de la familia, panel de Dirección, calendario, pagos por familia, pendientes y solicitudes, red de apoyo, avisos, resúmenes semanales y mensuales con PDF, evaluaciones por ciclo (diagnóstica, intermedia, final) con comparativo y objetivos, e indicadores de impacto. Desde el 25-oct-2026 el código vive en `github.com/ShadowM-123/sigae`, la demo pública en `https://shadowm-123.github.io/sigae/?demo=1` y la base real (sin usuarios aún) en el proyecto `sigae` de Supabase de SHADOW; ver `docs/04-Puesta-en-marcha.md`.
 
 ## Documentos
 - [`docs/01-Arquitectura.md`](docs/01-Arquitectura.md) — el mapa del sistema (léelo primero).

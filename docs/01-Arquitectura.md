@@ -122,7 +122,7 @@ El borrador se guarda automáticamente (cada cambio escribe en `bitacoras` con `
 |---|---|---|
 | `ciclos` | Periodo de acompañamiento (normalmente ciclo escolar) | `estudiante_id`, `nombre`, `fecha_inicio`, `fecha_fin`, `activo` |
 | `objetivos` | Objetivos de acompañamiento y estrategias | `estudiante_id`, `ciclo_id`, `descripcion`, `estrategia`, `estado` (en_proceso · alcanzado · pausado), `prioridad`, `visible_monitora`, `visible_familia` |
-| `evaluaciones` | Diagnóstica, intermedia y final | `estudiante_id`, `ciclo_id`, `tipo`, `fecha`, `aplicada_por`, `resultados` (jsonb: por dimensión del catálogo y por objetivo), `observaciones`, `archivo_path`, `visible_monitora`, `visible_familia` |
+| `evaluaciones` | Diagnóstica, intermedia y final | `estudiante_id`, `ciclo_id`, `tipo`, `fecha`, `realizada`, `aplicada_por`, `resultados` (jsonb `{ dimensiones: {clave: 1..5}, objetivos: {objetivoId: {estado, nota}} }`), `observaciones` (nunca a la familia), `archivo_path`, `visible_monitora`, `visible_familia` |
 | `resumenes` | Semanal y mensual | `estudiante_id`, `tipo`, `periodo_inicio`, `periodo_fin`, `contenido` (jsonb: relevantes · avances · dificultades recurrentes · objetivos que piden atención · temas de seguimiento), `generado_automaticamente`, `revisado_por`, `estado` (borrador · publicado), `pdf_path` |
 | `pagos` | Calendario de pagos de cada familia | `familia_id`, `fecha_vencimiento`, `monto`, `estado` (pendiente · pagado · vencido), `pagado_en`, `nota` |
 | `especialistas_estudiante` | Red de apoyo del estudiante (con o sin cuenta en SIGAE) | `estudiante_id`, `nombre`, `especialidad`, `tipo` (terapeuta · externo · personal_escolar), `contacto`, `dias_horarios`, `perfil_id` (si tiene cuenta), `registrado_por` |

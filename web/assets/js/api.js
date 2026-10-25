@@ -204,3 +204,13 @@ export function bloquesDelHorario(est) {
   const out = []; for (let m = ini; m < fin; m += 30) { const recreo = ri >= 0 && m >= ri && m < rf; out.push({ hora_inicio: aHora(m), hora_fin: aHora(Math.min(m + 30, fin)), recreo, valor: recreo ? 'no_aplica' : null }); }
   return out;
 }
+
+/* ---------- paso E: ciclos, objetivos, evaluaciones e indicadores ---------- */
+export async function ciclosDe(estId) { return ok(await db.from('ciclos').select('*').eq('estudiante_id', estId).order('fecha_inicio', { ascending: false })); }
+export async function ciclosTodos() { return ok(await db.from('ciclos').select('*').order('fecha_inicio', { ascending: false })); }
+export async function cicloActivo(estId) { return ok(await db.from('ciclos').select('*').eq('estudiante_id', estId).eq('activo', true).maybeSingle()); }
+export async function guardarCiclo(c) { return guardarPorId('ciclos', c); }
+export async function guardarObjetivo(o) { return guardarPorId('objetivos', o); }
+export async function objetivosTodos() { return ok(await db.from('objetivos').select('*').order('prioridad')); }
+export async function guardarEvaluacion(ev) { return guardarPorId('evaluaciones', ev); }
+export async function tutoresTodos() { return ok(await db.from('familia_tutores').select('*')); }

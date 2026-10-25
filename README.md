@@ -10,6 +10,8 @@ Arquitectura v1 cerrada y pasos A a H construidos (24 y 25-oct-2026): núcleo, b
 - [`docs/02-Preguntas-abiertas.md`](docs/02-Preguntas-abiertas.md) — lo que falta definir con Dirección y los supuestos vigentes.
 - [`docs/03-Decisiones.md`](docs/03-Decisiones.md) — bitácora de decisiones.
 - [`docs/04-Puesta-en-marcha.md`](docs/04-Puesta-en-marcha.md) — cuentas, repositorio, proyecto de Supabase, Resend y cómo se conectan.
+- [`docs/05-Entrega-a-Direccion.md`](docs/05-Entrega-a-Direccion.md) — para Dirección: qué tiene, dónde vive, cómo entra, primera semana y qué falta de su lado.
+- [`docs/06-Prompts-para-tu-Claude.md`](docs/06-Prompts-para-tu-Claude.md) — prompts listos para seguir cambiando SIGAE con Claude Code.
 - [`CLAUDE.md`](CLAUDE.md) — instrucciones para trabajar en este repo con Claude.
 
 ## Stack

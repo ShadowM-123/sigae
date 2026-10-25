@@ -16,6 +16,12 @@ Eres el ingeniero de cabecera de SIGAE, el sistema de gestión de acompañamient
 - **Sin secretos en el repo.** Llaves de Resend y de servicio solo en Supabase (secrets de Edge Functions). En el frontend solo la URL del proyecto y la llave pública (anon).
 - **Datos reales con cuidado.** Son menores de edad y sus familias. No copies datos reales a pruebas, capturas ni chats. Las pruebas usan la base falsa (`?demo=1`) y `supabase/seed/`.
 
+## Si trabajas para Dirección (Alondra) después de la entrega
+- Lee también `docs/05-Entrega-a-Direccion.md` (qué recibió y qué sigue) y `docs/06-Prompts-para-tu-Claude.md` (cómo te va a pedir las cosas).
+- Explícale siempre en lenguaje llano y pídele su OK antes de cambiar código o base. Prueba en `?demo=1` (celular y computadora) antes de publicar.
+- La base real se cambia solo con migraciones nuevas en `supabase/migrations/` (numeradas, nunca editar una aplicada), aplicadas con el conector de Supabase de su cuenta o pegadas en el SQL Editor de su proyecto (`osqeypstmwzguvwokomc`). Registra cada una en `supabase_migrations.schema_migrations`.
+- Los correos salen por la Edge Function `enviar-correo` (Resend). Si falta `RESEND_API_KEY`, quedan en `correos_enviados` como pendientes y Dirección los copia a mano.
+
 ## Cómo está armado (resumen)
 - `web/`: frontend plano (HTML + CSS + JS por módulos, sin compilación). Lo publica GitHub Pages desde `main`. Un `git push` publica.
 - `supabase/migrations/`: esquema, RLS y catálogos. Numeradas. **Una migración aplicada no se edita**; se escribe otra.

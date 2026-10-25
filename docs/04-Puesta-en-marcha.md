@@ -54,7 +54,12 @@ Se aplican con la herramienta del repo `supabase/herramientas/supabase_api.py` (
 - Páginas públicas (sin cuenta): `web/postulacion.html` (postulación) y `web/segunda-etapa.html?t=<token>` (segunda etapa). En Dirección → Reclutamiento → Ajustes se captura la URL pública, la liga de agenda para entrevistas y el remitente.
 - Usuarios de especialistas y de monitoras seleccionadas: hasta que esté Resend, se crean o invitan desde Authentication → Users con su correo y luego se vinculan/seleccionan desde Dirección.
 
-## 4. Resend (pendiente)
+## 4. Correos: Edge Function `enviar-correo` + Resend
+- La función `supabase/functions/enviar-correo/index.ts` está **desplegada** en el proyecto (Edge Functions → enviar-correo). Hace dos cosas: envía por Resend los correos pendientes de `correos_enviados` y, con `{ accion: 'invitar' }`, invita usuarios (familias, especialistas, monitoras seleccionadas) con la llave de servicio, que nunca sale de Supabase. Solo la puede llamar Dirección (JWT) o un cron con `CRON_KEY`.
+- El frontend la llama solo: después de encolar un correo (`correos.js`) y al invitar desde Especialistas o al seleccionar una postulante. Botón «Enviar pendientes ahora» en Reclutamiento → Correos por enviar.
+- Si se vuelve a desplegar desde el tablero (Edge Functions → enviar-correo → editor), pega el contenido del archivo del repo; con la CLI: `supabase functions deploy enviar-correo`.
+
+### Resend (lo que falta: cuenta a nombre de SHADOW)
 1. Crear la cuenta en resend.com con shadow.monitoras@gmail.com.
 2. Verificar el dominio de SHADOW (si no hay dominio propio, empezar con el remitente de pruebas `onboarding@resend.dev` solo hacia correos del equipo).
 3. Crear una API key «SIGAE producción» y guardarla en Supabase → Edge Functions → Secrets como `RESEND_API_KEY`. No pegarla en el chat ni en el repo.

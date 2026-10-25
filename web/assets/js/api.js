@@ -233,3 +233,13 @@ export async function materiales({ audiencia, estado, subidoPor } = {}) { let q 
 export async function guardarMaterial(m) { return guardarPorId('materiales', m); }
 export async function subirMaterial(file, prefijo) { const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, ''); const path = `${prefijo}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`; ok(await db.storage.from('materiales').upload(path, file)); return path; }
 export async function urlMaterial(path) { const r = await db.storage.from('materiales').createSignedUrl(path, 3600); return r.data?.signedUrl || ''; }
+
+/* ---------- paso G: especialistas con cuenta ---------- */
+/** Vínculos del especialista con sesión (filas de especialistas_estudiante activas) con el estudiante dentro. */
+export async function vinculosDeEspecialista(perfilId) {
+  const rel = ok(await db.from('especialistas_estudiante').select('*').eq('perfil_id', perfilId).eq('activo', true)); if (!rel.length) return [];
+  const es = ok(await db.from('estudiantes').select('*').in('id', rel.map(r => r.estudiante_id)));
+  return rel.map(r => ({ ...r, estudiante: es.find(e => e.id === r.estudiante_id) })).filter(r => r.estudiante);
+}
+/** Solo demo: crea un perfil sin pasar por auth (en producción el usuario se crea en Supabase Auth y luego se vincula). */
+export async function crearPerfilDemo(p) { return ok(await db.from('perfiles').insert(p).select().single()); }

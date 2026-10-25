@@ -7,6 +7,7 @@ import * as C from './direccion-c.js';
 import * as D from './direccion-d.js';
 import * as E from './direccion-e.js';
 import * as F from './direccion-f.js';
+import * as G from './direccion-g.js';
 import * as pdf from './pdf.js';
 import { avisosDireccion, pintarAvisos } from './avisos.js';
 import { modoDemo } from './supabase.js';
@@ -22,11 +23,11 @@ const ctx = { perfil, cat, ir: (t, p) => ir(t, p), verEstudiante: id => verEstud
 const TABS = [
   { grupo: 'Operación' }, { id: 'inicio', ic: '▦', tx: 'Inicio' }, { id: 'pendientes', ic: '☑', tx: 'Pendientes' }, { id: 'calendario', ic: '📅', tx: 'Calendario' }, { id: 'bitacoras', ic: '✎', tx: 'Bitácoras' }, { id: 'estudiantes', ic: '☺', tx: 'Estudiantes' }, { id: 'monitoras', ic: '✦', tx: 'Monitoras' }, { id: 'familias', ic: '⌂', tx: 'Familias' },
   { grupo: 'Seguimiento' }, { id: 'resumenes', ic: '▤', tx: 'Resúmenes' }, { id: 'evaluaciones', ic: '◔', tx: 'Evaluaciones' }, { id: 'indicadores', ic: '↗', tx: 'Indicadores' },
-  { grupo: 'Equipo y red' }, { id: 'academia', ic: '▶', tx: 'Academia' }, { id: 'materiales', ic: '▤', tx: 'Materiales' }, { id: 'especialistas', ic: '✚', tx: 'Especialistas', pronto: true }, { id: 'reclutamiento', ic: '⇄', tx: 'Reclutamiento', pronto: true },
+  { grupo: 'Equipo y red' }, { id: 'academia', ic: '▶', tx: 'Academia' }, { id: 'materiales', ic: '▤', tx: 'Materiales' }, { id: 'especialistas', ic: '✚', tx: 'Especialistas' }, { id: 'reclutamiento', ic: '⇄', tx: 'Reclutamiento', pronto: true },
   { grupo: 'Configuración' }, { id: 'catalogos', ic: '☰', tx: 'Catálogos' },
 ];
 const { pintar: pintarTabs } = marco({ perfil, tabs: TABS, activa: 'inicio', onTab: ir, subtitulo: 'Dirección' });
-async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx), resumenes: () => D.resumenes(vista, ctx), evaluaciones: p => E.evaluaciones(vista, ctx, p), indicadores: () => E.indicadores(vista, ctx), academia: p => F.academia(vista, ctx, p), materiales: p => F.materiales(vista, ctx, p) }[tab] || inicio)(params); }
+async function ir(tab, params = {}) { pintarTabs(tab); vista.innerHTML = '<div class="vacio">Cargando…</div>'; window.scrollTo(0, 0); await ({ inicio, bitacoras, estudiantes, monitoras, familias, catalogos, calendario: () => C.calendario(vista, ctx), pendientes: () => C.pendientes(vista, ctx), resumenes: () => D.resumenes(vista, ctx), evaluaciones: p => E.evaluaciones(vista, ctx, p), indicadores: () => E.indicadores(vista, ctx), academia: p => F.academia(vista, ctx, p), materiales: p => F.materiales(vista, ctx, p), especialistas: () => G.especialistas(vista, ctx) }[tab] || inicio)(params); }
 
 function nuevaTarea(alGuardar) {
   api.panoramaEstudiantes().then(pan => {
@@ -164,7 +165,7 @@ async function verEstudiante(id) {
     </div>
     <div style="margin-top:12px">${await D.htmlResumenesEstudiante(id)}</div>
     <h4 style="margin:14px 0 8px">Red de apoyo: terapias, especialistas y citas</h4>${await C.htmlRedApoyo(id, { editable: true, prefijo: 'ra' })}`, `<button class="btn" data-cerrar>Cerrar</button><button class="btn" id="eEditar">Editar expediente</button>`);
-  C.engancharRedApoyo(document.getElementById('modal'), id, perfil.id, () => verEstudiante(id), { prefijo: 'ra' });
+  C.engancharRedApoyo(document.getElementById('modal'), id, perfil.id, () => verEstudiante(id), { prefijo: 'ra', autorizar: true });
   D.engancharResumenesEstudiante(document.getElementById('modal'), { ...e, monitora: moni }, ctx, () => verEstudiante(id));
   document.querySelector('[data-abrir-eval]').onclick = () => { cerrarModal(); ir('evaluaciones', { id }); };
   document.getElementById('eEditar').onclick = () => editarEstudiante(e);

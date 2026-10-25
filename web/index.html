@@ -26,7 +26,7 @@
     <div class="small muted" style="margin:0 0 8px">Modo demo: entra como…</div>
     <div class="demo-usuarios" id="usuariosDemo"></div>
   </div>
-  <p class="small muted" style="margin-top:18px;text-align:center">¿Quieres postularte como monitora? <a href="postulacion.html">Envía tu postulación</a> (próximamente)</p>
+  <p class="small muted" style="margin-top:18px;text-align:center">¿Quieres postularte como monitora? <a href="postulacion.html" id="lnkPost">Envía tu postulación</a></p>
 </div></main>
 <script type="module">
 import { db, modoDemo, ruta } from './assets/js/supabase.js';
@@ -51,8 +51,8 @@ if (modoDemo) {
   document.getElementById('aviso').innerHTML = '<div class="alerta warn" style="margin-bottom:12px"><span class="tx"><b>Versión de demostración.</b> Datos ficticios. Elige un usuario abajo; la contraseña no se valida.</span></div>';
   const { data: ps } = await db.from('perfiles').select('*').eq('activo', true).order('rol');
   const orden = { direccion: 0, monitora: 1, familia: 2, especialista: 3 };
-  const etiqueta = { direccion: 'Dirección', monitora: 'Monitora educativa', familia: 'Familia', especialista: 'Especialista (próximamente)' };
-  document.getElementById('usuariosDemo').innerHTML = ps.filter(p => p.rol !== 'especialista' && p.id !== 'p-andres').sort((a, b) => orden[a.rol] - orden[b.rol]).map(p => `<button data-correo="${esc(p.correo)}"><span class="ava">${iniciales(p.nombre)}</span><span><b>${esc(p.nombre)}</b><small>${etiqueta[p.rol]} · ${esc(p.correo)}</small></span></button>`).join('');
+  const etiqueta = { direccion: 'Dirección', monitora: 'Monitora educativa', familia: 'Familia', especialista: 'Especialista o personal escolar' };
+  document.getElementById('usuariosDemo').innerHTML = ps.filter(p => p.id !== 'p-andres').sort((a, b) => orden[a.rol] - orden[b.rol]).map(p => `<button data-correo="${esc(p.correo)}"><span class="ava">${iniciales(p.nombre)}</span><span><b>${esc(p.nombre)}</b><small>${etiqueta[p.rol]} · ${esc(p.correo)}</small></span></button>`).join('');
   document.querySelectorAll('#usuariosDemo button').forEach(b => b.onclick = async () => { const { data } = await db.auth.signInWithPassword({ email: b.dataset.correo, password: 'demo' }); irPorRol(data.user.id); });
 }
 </script>

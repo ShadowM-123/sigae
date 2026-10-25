@@ -3,7 +3,7 @@
    auth, storage, rpc) sobre datos en memoria, persistidos en localStorage.
    Se activa con ?demo=1. NUNCA contiene datos reales. */
 
-const VER = 8;
+const VER = 9;
 const KEY = 'sigae_demo_db_v' + VER;
 const KEY_SESION = 'sigae_demo_sesion';
 
@@ -28,7 +28,8 @@ function semilla() {
     { id: P.f1b, rol: 'familia', nombre: 'Andrés Mendoza', correo: 'andres@familia.demo', telefono: '614 200 0011', activo: true },
     { id: P.f2, rol: 'familia', nombre: 'Ricardo Torres', correo: 'ricardo@familia.demo', telefono: '614 200 0002', activo: true },
     { id: P.f3, rol: 'familia', nombre: 'Mónica Reyes', correo: 'monica@familia.demo', telefono: '614 200 0003', activo: true },
-    { id: P.esp1, rol: 'especialista', subtipo_especialista: 'terapeuta', nombre: 'Lic. Karina Soto (terapia de lenguaje)', correo: 'karina@terapia.demo', activo: true },
+    { id: P.esp1, rol: 'especialista', subtipo_especialista: 'terapeuta', nombre: 'Lic. Karina Soto', correo: 'karina@terapia.demo', activo: true },
+    { id: 'p-maestra', rol: 'especialista', subtipo_especialista: 'personal_escolar', nombre: 'Mtra. Lourdes Chávez', correo: 'lchavez@montessoridelvalle.mx', activo: true },
   ];
   const familias = [
     { id: 'fam-mendoza', nombre_familia: 'Familia Mendoza Aguirre', dia_de_pago: Math.min(28, Number(dia(5).slice(8))), monto_mensual: 6500, notas: '' },
@@ -166,6 +167,8 @@ function semilla() {
   ];
   const solicitudes = [
     { id: uuid(), tipo: 'reporte_familia', estudiante_id: 'est-emiliano', solicitante_id: P.f3, datos: { motivo: 'Cita con el neurólogo', fecha_cita: dia(10), detalle: 'Quisiera llevar un resumen del último mes.' }, estado: 'recibida', creado_en: `${dia(-1)}T19:20:00`, actualizado_en: `${dia(-1)}T19:20:00` },
+    { id: 'sol-esp-1', tipo: 'reporte_especialista', estudiante_id: 'est-santiago', solicitante_id: P.esp1, datos: { motivo: 'Preparar el ajuste del plan de terapia de lenguaje del siguiente bimestre; necesito saber cómo pide ayuda en el salón y qué frases usa.', objetivo: 'Ajustar objetivos de comunicación funcional', periodo: 'septiembre y octubre', fecha_limite: dia(12) }, estado: 'en_revision', respuesta_direccion: 'Lo revisamos esta semana con Daniela.', creado_en: `${dia(-3)}T12:10:00`, actualizado_en: `${dia(-2)}T09:00:00` },
+    { id: 'sol-esp-2', tipo: 'visita_escolar', estudiante_id: 'est-santiago', solicitante_id: 'p-maestra', datos: { motivo: 'Dificultades en el recreo con el ruido del patio', objetivo: 'Acordar entre escuela y SHADOW una estrategia de salida gradual al recreo', personas: 'Maestra titular, coordinadora de primaria y la monitora', fechas_propuestas: 'Martes o jueves entre 9 y 11' }, estado: 'recibida', respuesta_direccion: null, creado_en: `${dia(-1)}T13:40:00`, actualizado_en: `${dia(-1)}T13:40:00` },
   ];
   const eventos = [
     { id: uuid(), tipo: 'visita_escolar', titulo: 'Visita escolar · Colegio Montessori del Valle', fecha: dia(4), hora: '09:30', lugar: 'Colegio Montessori del Valle', estudiante_id: 'est-santiago', monitora_id: P.m1, notas: 'Reunión con la maestra titular para revisar transiciones.', creado_por: P.dir },
@@ -174,9 +177,9 @@ function semilla() {
     { id: uuid(), tipo: 'entrevista', titulo: 'Entrevista a candidata (reclutamiento)', fecha: dia(6), hora: '11:00', lugar: 'Oficina SHADOW', estudiante_id: null, monitora_id: null, notas: '', creado_por: P.dir },
   ];
   const especialistas_estudiante = [
-    { id: 'esp-1', estudiante_id: 'est-santiago', nombre: 'Lic. Karina Soto', especialidad: 'Terapia de lenguaje', tipo: 'terapeuta', contacto: '614 300 0001', lugar: 'Centro Integra, Av. Mirador 1200', dias_horarios: 'Martes y jueves 16:00', perfil_id: P.esp1, registrado_por: P.f1, activo: true },
+    { id: 'esp-1', estudiante_id: 'est-santiago', nombre: 'Lic. Karina Soto', especialidad: 'Terapia de lenguaje', tipo: 'terapeuta', contacto: '614 300 0001', lugar: 'Centro Integra, Av. Mirador 1200', dias_horarios: 'Martes y jueves 16:00', perfil_id: P.esp1, correo: 'karina@terapia.demo', puede_ver_bitacoras: true, autorizado_por: P.dir, autorizado_en: `${dia(-150)}T10:00:00`, registrado_por: P.f1, activo: true },
     { id: 'esp-2', estudiante_id: 'est-santiago', nombre: 'Dr. Arturo Lozano', especialidad: 'Neurología pediátrica', tipo: 'externo', contacto: '614 300 0002', lugar: 'Hospital Ángeles, consultorio 410', dias_horarios: 'Cita cada 3 meses', perfil_id: null, registrado_por: P.f1, activo: true },
-    { id: 'esp-3', estudiante_id: 'est-santiago', nombre: 'Mtra. Lourdes Chávez', especialidad: 'Maestra titular 3º A', tipo: 'personal_escolar', contacto: 'lchavez@montessoridelvalle.mx', lugar: 'Colegio Montessori del Valle', dias_horarios: '', perfil_id: null, registrado_por: P.dir, activo: true },
+    { id: 'esp-3', estudiante_id: 'est-santiago', nombre: 'Mtra. Lourdes Chávez', especialidad: 'Maestra titular 3º A', tipo: 'personal_escolar', contacto: 'lchavez@montessoridelvalle.mx', lugar: 'Colegio Montessori del Valle', dias_horarios: '', perfil_id: 'p-maestra', correo: 'lchavez@montessoridelvalle.mx', puede_ver_bitacoras: false, registrado_por: P.dir, activo: true },
     { id: 'esp-4', estudiante_id: 'est-valentina', nombre: 'Psic. Daniel Ríos', especialidad: 'Psicología infantil', tipo: 'terapeuta', contacto: '614 300 0004', lugar: 'Consultorio privado, Col. San Felipe', dias_horarios: 'Miércoles 17:30', perfil_id: null, registrado_por: P.f2, activo: true },
     { id: 'esp-5', estudiante_id: 'est-emiliano', nombre: 'Lic. Fabiola Mena', especialidad: 'Terapia ocupacional', tipo: 'terapeuta', contacto: '614 300 0005', lugar: 'CRIT Chihuahua', dias_horarios: 'Lunes y miércoles 15:00', perfil_id: null, registrado_por: P.f3, activo: true },
   ];
@@ -187,6 +190,7 @@ function semilla() {
     { id: uuid(), estudiante_id: 'est-valentina', especialista_id: 'esp-4', especialista_nombre: 'Psic. Daniel Ríos', especialidad: 'Psicología infantil', fecha: dia(3), hora: '17:30', lugar_modalidad: 'Consultorio', observaciones: '', creada_por: P.f2 },
   ];
   const solicitud_historial = solicitudes.map(sl => ({ id: uuid(), solicitud_id: sl.id, estado: 'recibida', nota: null, por: sl.solicitante_id, fecha: sl.creado_en }));
+  solicitud_historial.push({ id: uuid(), solicitud_id: 'sol-esp-1', estado: 'en_revision', nota: 'Lo revisamos esta semana con Daniela.', por: P.dir, fecha: `${dia(-2)}T09:00:00` });
   const notificaciones = [];
   const accesos_sesion = [];
   for (let off = -30; off <= 0; off++) { [P.m1, P.m2, P.m3].forEach((m, i) => { if ((off + i) % 2 === 0) accesos_sesion.push({ id: uuid(), perfil_id: m, fecha_hora: `${dia(off)}T07:${50 + i}:00`, dispositivo: 'celular' }); }); if (off % 3 === 0) accesos_sesion.push({ id: uuid(), perfil_id: P.f1, fecha_hora: `${dia(off)}T18:30:00`, dispositivo: 'celular' }); }

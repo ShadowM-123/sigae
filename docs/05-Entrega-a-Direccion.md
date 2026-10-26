@@ -2,6 +2,8 @@
 
 Este documento es para ti, Alondra. Está escrito sin tecnicismos. Dice qué tienes, dónde está, cómo entras, qué hacer la primera semana y cómo seguir cambiando SIGAE con tu propio Claude. Los detalles técnicos viven en `docs/04-Puesta-en-marcha.md` y los prompts para tu Claude en `docs/06-Prompts-para-tu-Claude.md`.
 
+> **Lo único que tienes que hacer tú:** abrir Claude y pegar el prompt de `docs/07-Prompt-de-arranque.md`. Él te lleva de la mano para conectar tus cuentas y dejar todo listo. Lo que sigue es para que sepas qué tienes; no son pasos que debas hacer sola.
+
 ## 1. Qué tienes
 SIGAE es tu plataforma de acompañamiento educativo, construida a partir del documento «Experiencias de usuario SIGAE». Tiene cinco perfiles:
 
@@ -39,7 +41,7 @@ Quien te ayudó a construir (Biné) entró como **colaborador** en GitHub y como
 6. **Recursos.** Carga los primeros materiales para monitoras y para familias.
 7. **Prueba una semana completa** con una monitora real: bitácora diaria, revisión, el lunes el resumen semanal (sale solo como borrador; tú lo publicas), y la familia leyéndolo desde su celular.
 
-## 5. Lo que falta de tu lado (10 minutos cada uno)
+## 5. Lo que falta (tu Claude lo hace contigo en el prompt de arranque)
 - **Resend (correos automáticos).** Crea la cuenta en resend.com con tu correo, verifica tu dominio si tienes uno, crea una API key y pégala en Supabase → Edge Functions → Secrets como `RESEND_API_KEY`. En Reclutamiento → Ajustes pon el remitente. Hasta entonces, los correos quedan en Reclutamiento → «Correos por enviar», listos para copiar y mandar a mano.
 - **Tu agenda de entrevistas.** En Reclutamiento → Ajustes pega la liga de tu página de citas (Google Calendar «Citas» u otra). Así las candidatas eligen horario solas.
 - **El logo en PNG.** Pide a tu Claude que lo coloque en `web/assets/img/logo-shadow.png` (hoy hay una versión aproximada en SVG).

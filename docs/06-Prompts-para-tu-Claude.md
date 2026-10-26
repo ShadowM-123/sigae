@@ -3,13 +3,7 @@
 Alondra: estos prompts están pensados para que los copies y pegues tal cual en **Claude Code** (la app de escritorio o la terminal), con la carpeta del proyecto abierta. Tu Claude leerá primero el archivo `CLAUDE.md` del repositorio, que le explica cómo está armado SIGAE y qué reglas no se negocian. No necesitas saber programar: describe lo que quieres en tus palabras y pídele siempre que te explique en lenguaje llano.
 
 ## Antes de empezar (una sola vez)
-1. Instala Git y Claude Code en tu computadora (tu Claude te puede guiar: pídele «ayúdame a instalar Git en Windows paso a paso»).
-2. Descarga el proyecto: abre una terminal y escribe:
-   ```
-   git clone https://github.com/ShadowM-123/sigae.git
-   ```
-3. Abre Claude Code dentro de la carpeta `sigae`.
-4. En Claude Code, conecta el **conector de Supabase** con tu cuenta (shadow.monitoras@gmail.com) y elige la organización «Shadow Monitoras Educativas». Así tu Claude podrá leer y cambiar la base de datos de SIGAE sin que tú copies llaves.
+Pega el **prompt de arranque** de `docs/07-Prompt-de-arranque.md`. Él te guía para descargar el proyecto y conectar GitHub, Supabase y Resend con tu Claude, y deja SIGAE funcionando. Los prompts de abajo son para después, en el día a día.
 
 ## Prompt 1 · Conocer el proyecto (empieza siempre aquí)
 ```
